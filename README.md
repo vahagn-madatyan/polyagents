@@ -173,6 +173,33 @@ Retrieve and display a list of markets from Polymarket, sorted by volume.
 - limit: The number of markets to retrieve (default: 5).
 - sort_by: The sorting criterion, either volume (default) or another valid attribute.
 
+`run-autonomous-trader`
+Run the autonomous trade pipeline across all filtered events/markets. You can optionally inject recent news context, or scope the run to one event URL.
+
+   ```
+   python scripts/python/cli.py run-autonomous-trader \
+     --include-news \
+     --news-limit 5 \
+     --news-days 7 \
+     --news-relevance
+   ```
+
+Single-event mode through the same command:
+
+   ```
+   python scripts/python/cli.py run-autonomous-trader \
+     --event-url "https://polymarket.com/event/english-premier-league-winner" \
+     --news-limit 5 \
+     --news-days 7 \
+     --news-relevance
+   ```
+
+- event_url: Optional Polymarket event URL in `/event/<slug>` format. If set, runs targeted event analysis.
+- include_news: Enable per-market news ingestion in full autonomous mode (default: false).
+- news_limit: Max number of recent news articles queried per market (default: 5).
+- news_days: Lookback window for article search in days (default: 7).
+- news_relevance: Use relevance-sorted body matching for tighter context (default: true). Use `--no-news-relevance` to disable.
+
 `analyze-event-url`
 Run the full prediction and trade-suggestion pipeline for one specific Polymarket event URL, with recent news context injected into the superforecast step.
 

@@ -8,6 +8,11 @@ def _trader_without_init() -> Trader:
     return Trader.__new__(Trader)
 
 
+class _MarketDocStub:
+    def __init__(self, metadata):
+        self.metadata = metadata
+
+
 @pytest.mark.parametrize(
     "event_url,expected_slug",
     [
@@ -125,3 +130,59 @@ def test_resolve_event_by_slug_uses_full_scan_fallback() -> None:
 
     assert event is not None
     assert event.id == 77
+
+
+def test_build_market_news_keywords_falls_back_to_market_metadata_when_target_event_missing() -> None:
+    trader = _trader_without_init()
+    market_obj = (
+        _MarketDocStub(
+            {
+                "event_title": "English Premier League Winner",
+                "event_slug": "english-premier-league-winner",
+                "question": "Will Arsenal win the EPL?",
+                "category": "sports",
+                "tags": "soccer,premier league",
+            }
+        ),
+        0.12,
+    )
+
+    keywords = trader._build_market_news_keywords(market_obj, target_event=None)
+
+    assert "English Premier League Winner" in keywords
+    assert "Will Arsenal win the EPL?" in keywords
+
+
+def test_build_market_news_keywords_prefers_target_event_metadata() -> None:
+    trader = _trader_without_init()
+    market_obj = (
+        _MarketDocStub(
+            {
+                "event_title": "Stale event title",
+                "event_slug": "stale-event-slug",
+                "question": "Will Team A win the final?",
+                "category": "sports",
+                "tags": "football,champions league",
+            }
+        ),
+        0.02,
+    )
+    target_event = SimpleEvent(
+        id=101,
+        ticker="",
+        slug="uefa-champions-league-winner",
+        title="UEFA Champions League Winner",
+        description="",
+        end="",
+        active=True,
+        closed=False,
+        archived=False,
+        restricted=False,
+        new=False,
+        featured=False,
+        markets="1,2",
+    )
+
+    keywords = trader._build_market_news_keywords(market_obj, target_event=target_event)
+
+    assert "UEFA Champions League Winner" in keywords

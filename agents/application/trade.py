@@ -37,6 +37,10 @@ class Trader:
             str(os.getenv("TRADE_NEWS_RELEVANCE", "true")).strip().lower()
             in ("1", "true", "yes", "on")
         )
+        self.default_include_news = (
+            str(os.getenv("TRADE_INCLUDE_NEWS", "false")).strip().lower()
+            in ("1", "true", "yes", "on")
+        )
 
     def pre_trade_logic(self) -> None:
         self.clear_local_dbs()
@@ -301,16 +305,26 @@ class Trader:
                 break
         return normalized
 
-    def _build_market_news_keywords(self, market_obj, target_event: SimpleEvent) -> str:
+    def _build_market_news_keywords(
+        self,
+        market_obj,
+        target_event: Optional[SimpleEvent] = None,
+    ) -> str:
         market_doc = market_obj[0] if isinstance(market_obj, (list, tuple)) else None
         metadata = getattr(market_doc, "metadata", {}) or {}
 
         tags = [tag.strip() for tag in str(metadata.get("tags", "")).split(",") if tag.strip()]
+        event_title = target_event.title if target_event and target_event.title else ""
+        event_slug = target_event.slug if target_event and target_event.slug else ""
+        metadata_event_title = str(metadata.get("event_title", "")).strip()
+        metadata_event_slug = str(metadata.get("event_slug", "")).strip()
+
         base_keywords = self._normalize_keywords(
             [
-                target_event.title,
-                target_event.slug.replace("-", " "),
-                str(metadata.get("event_title", "")),
+                event_title,
+                event_slug.replace("-", " "),
+                metadata_event_title,
+                metadata_event_slug.replace("-", " "),
                 str(metadata.get("question", "")),
                 str(metadata.get("category", "")),
             ]
@@ -344,10 +358,10 @@ class Trader:
     def _build_news_context_by_market_id(
         self,
         filtered_markets: List[tuple],
-        target_event: SimpleEvent,
         news_limit: int,
         news_days: int,
         news_relevance: bool,
+        target_event: Optional[SimpleEvent] = None,
     ) -> Dict[int, str]:
         context_by_market_id: Dict[int, str] = {}
         article_cap = max(1, min(self.news_context_article_cap, news_limit))
@@ -361,7 +375,10 @@ class Trader:
             except (TypeError, ValueError):
                 continue
 
-            keywords = self._build_market_news_keywords(market_obj, target_event)
+            keywords = self._build_market_news_keywords(
+                market_obj,
+                target_event=target_event,
+            )
             if not keywords:
                 continue
 
@@ -516,7 +533,13 @@ class Trader:
                     print("[execution] aborting_due_to_failure TRADE_CONTINUE_ON_EXECUTION_ERROR=false")
                     break
 
-    def one_best_trade(self) -> None:
+    def one_best_trade(
+        self,
+        include_news: Optional[bool] = None,
+        news_limit: Optional[int] = None,
+        news_days: Optional[int] = None,
+        news_relevance: Optional[bool] = None,
+    ) -> None:
         """
         one_best_trade runs the autonomous trading pipeline end-to-end.
         """
@@ -549,7 +572,39 @@ class Trader:
                 print("No markets survived filtering. Exiting run.")
                 return
 
-            candidates_payload = self.agent.build_trade_candidates(filtered_markets)
+            resolved_include_news = (
+                self.default_include_news if include_news is None else bool(include_news)
+            )
+            context_by_market_id = None
+            if resolved_include_news:
+                resolved_news_limit = (
+                    self.default_news_limit if news_limit is None else max(1, int(news_limit))
+                )
+                resolved_news_days = (
+                    self.default_news_days if news_days is None else max(1, int(news_days))
+                )
+                resolved_news_relevance = (
+                    self.default_news_relevance
+                    if news_relevance is None
+                    else bool(news_relevance)
+                )
+                print(
+                    "[news] config "
+                    f"limit={resolved_news_limit} days={resolved_news_days} relevance={resolved_news_relevance}"
+                )
+                context_by_market_id = self._build_news_context_by_market_id(
+                    filtered_markets=filtered_markets,
+                    news_limit=resolved_news_limit,
+                    news_days=resolved_news_days,
+                    news_relevance=resolved_news_relevance,
+                )
+            else:
+                print("[news] disabled for autonomous run")
+
+            candidates_payload = self.agent.build_trade_candidates(
+                filtered_markets,
+                supplemental_context_by_market_id=context_by_market_id,
+            )
             self._finalize_candidates(candidates_payload, completion_step=6)
 
         except Exception as e:

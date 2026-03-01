@@ -1,3 +1,5 @@
+from typing import Optional
+
 import typer
 from devtools import pprint
 
@@ -129,12 +131,33 @@ def ask_polymarket_llm(user_input: str) -> None:
 
 
 @app.command()
-def run_autonomous_trader() -> None:
+def run_autonomous_trader(
+    event_url: Optional[str] = None,
+    include_news: bool = False,
+    news_limit: int = 5,
+    news_days: int = 7,
+    news_relevance: bool = True,
+) -> None:
     """
     Let an autonomous system trade for you.
+    Optionally scope to a single event URL and/or inject recent news context.
     """
     trader = Trader()
-    trader.one_best_trade()
+    if event_url:
+        trader.analyze_event_url(
+            event_url=event_url,
+            news_limit=news_limit,
+            news_days=news_days,
+            news_relevance=news_relevance,
+        )
+        return
+
+    trader.one_best_trade(
+        include_news=include_news,
+        news_limit=news_limit,
+        news_days=news_days,
+        news_relevance=news_relevance,
+    )
 
 
 @app.command()
