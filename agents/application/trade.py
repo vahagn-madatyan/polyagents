@@ -42,14 +42,13 @@ class Trader:
         self.clear_local_dbs()
 
     def clear_local_dbs(self) -> None:
-        try:
-            shutil.rmtree("local_db_events")
-        except Exception:
-            pass
-        try:
-            shutil.rmtree("local_db_markets")
-        except Exception:
-            pass
+        for path in ("local_db_events", "local_db_markets"):
+            try:
+                shutil.rmtree(path)
+            except FileNotFoundError:
+                continue
+            except Exception as err:
+                print(f"[cleanup] unable_to_remove path={path} error={err}")
 
     def _truncate(self, value, max_len: int = 88) -> str:
         text = str(value)
@@ -224,7 +223,7 @@ class Trader:
 
         raise ValueError(f"URL must include /event/<slug>: {event_url}")
 
-    def _resolve_tradeable_event_by_slug(self, event_slug: str) -> Optional[SimpleEvent]:
+    def _resolve_event_by_slug(self, event_slug: str) -> Optional[SimpleEvent]:
         slug = str(event_slug or "").strip().lower()
         if not slug:
             return None
@@ -234,9 +233,6 @@ class Trader:
             raw_events = self.gamma.get_events(
                 querystring_params={
                     "slug": slug,
-                    "active": True,
-                    "closed": False,
-                    "archived": False,
                     "limit": 10,
                 }
             )
@@ -250,14 +246,26 @@ class Trader:
             except Exception as err:
                 print(f"[event] parse_failed slug={slug} error={err}")
 
-        tradeable_direct = self.polymarket.filter_events_for_trading(parsed_events)
-        for event in tradeable_direct:
-            if str(event.slug or "").strip().lower() == slug:
-                return event
+        direct_matches = [
+            event
+            for event in parsed_events
+            if str(event.slug or "").strip().lower() == slug
+        ]
+        if direct_matches:
+            # Prefer active/open/non-archived, but still return a slug match if only closed/archived exists.
+            preferred = sorted(
+                direct_matches,
+                key=lambda event: (
+                    not bool(event.active),
+                    bool(event.closed),
+                    bool(event.archived),
+                ),
+            )
+            return preferred[0]
 
         print(f"[event] falling_back_to_full_scan slug={slug}")
         try:
-            for event in self.polymarket.get_all_tradeable_events():
+            for event in self.polymarket.get_all_events():
                 if str(event.slug or "").strip().lower() == slug:
                     return event
         except Exception as err:
@@ -523,15 +531,35 @@ class Trader:
             slug = self._extract_event_slug_from_url(event_url)
             print(f"1. RESOLVED EVENT SLUG {slug!r}")
 
-            target_event = self._resolve_tradeable_event_by_slug(slug)
+            target_event = self._resolve_event_by_slug(slug)
             if not target_event:
-                print(f"No active tradeable event found for slug '{slug}'. Exiting run.")
+                print(f"No event found for slug '{slug}'. Exiting run.")
                 return
 
             print(
                 "2. TARGET EVENT "
                 f"id={target_event.id} title={target_event.title!r} slug={target_event.slug!r}"
             )
+
+            if not target_event.active or target_event.closed or target_event.archived:
+                print(
+                    "[event] not_tradeable_state "
+                    f"active={target_event.active} closed={target_event.closed} archived={target_event.archived}"
+                )
+                print("Target event is not currently tradeable. Exiting run.")
+                return
+
+            if target_event.restricted and not self.polymarket.allow_restricted_events:
+                print(
+                    "[event] restricted_event "
+                    "ALLOW_RESTRICTED_EVENTS=false, so execution is blocked by current policy."
+                )
+                if self.execute_trades:
+                    print(
+                        "Set ALLOW_RESTRICTED_EVENTS=true if you are legally allowed and want to execute. Exiting run."
+                    )
+                    return
+                print("Continuing as analysis-only dry run for restricted event.")
 
             markets = self.agent.map_filtered_events_to_markets([target_event])
             print()
