@@ -137,6 +137,7 @@ def run_autonomous_trader(
     news_limit: int = 5,
     news_days: int = 7,
     news_relevance: bool = True,
+    exclude_sports: bool = False,
 ) -> None:
     """
     Let an autonomous system trade for you.
@@ -149,6 +150,7 @@ def run_autonomous_trader(
             news_limit=news_limit,
             news_days=news_days,
             news_relevance=news_relevance,
+            exclude_sports=exclude_sports,
         )
         return
 
@@ -157,6 +159,7 @@ def run_autonomous_trader(
         news_limit=news_limit,
         news_days=news_days,
         news_relevance=news_relevance,
+        exclude_sports=exclude_sports,
     )
 
 
@@ -174,6 +177,7 @@ def analyze_event_url(
     news_limit: int = 5,
     news_days: int = 7,
     news_relevance: bool = True,
+    exclude_sports: bool = False,
 ) -> None:
     """
     Run the prediction + trade suggestion pipeline for a specific Polymarket event URL.
@@ -184,6 +188,7 @@ def analyze_event_url(
         news_limit=news_limit,
         news_days=news_days,
         news_relevance=news_relevance,
+        exclude_sports=exclude_sports,
     )
 
 

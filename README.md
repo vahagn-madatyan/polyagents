@@ -179,6 +179,7 @@ Run the autonomous trade pipeline across all filtered events/markets. You can op
    ```
    python scripts/python/cli.py run-autonomous-trader \
      --include-news \
+     --exclude-sports \
      --news-limit 5 \
      --news-days 7 \
      --news-relevance
@@ -189,6 +190,7 @@ Single-event mode through the same command:
    ```
    python scripts/python/cli.py run-autonomous-trader \
      --event-url "https://polymarket.com/event/english-premier-league-winner" \
+     --exclude-sports \
      --news-limit 5 \
      --news-days 7 \
      --news-relevance
@@ -196,9 +198,12 @@ Single-event mode through the same command:
 
 - event_url: Optional Polymarket event URL in `/event/<slug>` format. If set, runs targeted event analysis.
 - include_news: Enable per-market news ingestion in full autonomous mode (default: false).
+- exclude_sports: Exclude sports markets before scoring/execution (default: false).
 - news_limit: Max number of recent news articles queried per market (default: 5).
 - news_days: Lookback window for article search in days (default: 7).
 - news_relevance: Use relevance-sorted body matching for tighter context (default: true). Use `--no-news-relevance` to disable.
+
+Live execution note: allocations below the exchange minimum order size are skipped before placing orders. Configure threshold with `TRADE_MIN_ORDER_AMOUNT_USDC` (default: `1.0`).
 
 `analyze-event-url`
 Run the full prediction and trade-suggestion pipeline for one specific Polymarket event URL, with recent news context injected into the superforecast step.
@@ -206,12 +211,14 @@ Run the full prediction and trade-suggestion pipeline for one specific Polymarke
    ```
    python scripts/python/cli.py analyze-event-url \
      "https://polymarket.com/event/english-premier-league-winner" \
+     --exclude-sports \
      --news-limit 5 \
      --news-days 7 \
      --news-relevance
    ```
 
 - event_url: Polymarket event URL in `/event/<slug>` format.
+- exclude_sports: Exclude sports markets before scoring/execution (default: false).
 - news_limit: Max number of recent news articles queried per market (default: 5).
 - news_days: Lookback window for article search in days (default: 7).
 - news_relevance: Use relevance-sorted body matching for tighter context (default: true). Use `--no-news-relevance` to disable.

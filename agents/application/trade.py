@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from urllib.parse import unquote, urlparse
 
-from agents.application.executor import Executor as Agent
+from agents.application.executor import Executor as Agent, canonicalize_category
 from agents.connectors.news import News
 from agents.polymarket.gamma import GammaMarketClient as Gamma
 from agents.polymarket.polymarket import Polymarket
@@ -41,6 +41,15 @@ class Trader:
             str(os.getenv("TRADE_INCLUDE_NEWS", "false")).strip().lower()
             in ("1", "true", "yes", "on")
         )
+        self.default_exclude_sports = (
+            str(os.getenv("TRADE_EXCLUDE_SPORTS", "false")).strip().lower()
+            in ("1", "true", "yes", "on")
+        )
+        try:
+            min_order_amount = float(os.getenv("TRADE_MIN_ORDER_AMOUNT_USDC", "1.0"))
+        except (TypeError, ValueError):
+            min_order_amount = 1.0
+        self.min_order_amount_usdc = max(0.0, min_order_amount)
 
     def pre_trade_logic(self) -> None:
         self.clear_local_dbs()
@@ -196,6 +205,97 @@ class Trader:
             f"selected={categories_selected or ['n/a']}"
         )
         print(f"[run] planned_allocation_usdc={planned_allocation:.6f}")
+
+    def _market_category_bucket(self, market_obj) -> str:
+        market_doc = market_obj[0] if isinstance(market_obj, (list, tuple)) else None
+        metadata = getattr(market_doc, "metadata", {}) or {}
+        description = str(getattr(market_doc, "page_content", "") or "")
+        return canonicalize_category(
+            explicit_category=str(metadata.get("category", "")),
+            tags=str(metadata.get("tags", "")),
+            question=str(metadata.get("question", "")),
+            description=description,
+        )
+
+    def _exclude_sports_markets(self, filtered_markets: List[tuple]) -> List[tuple]:
+        return [
+            market_obj
+            for market_obj in filtered_markets
+            if self._market_category_bucket(market_obj) != "sports"
+        ]
+
+    def _apply_minimum_order_constraints(
+        self,
+        selected_candidates: List[CandidateTrade],
+        usdc_balance: float,
+    ) -> List[CandidateTrade]:
+        if not selected_candidates:
+            return selected_candidates
+
+        if self.min_order_amount_usdc <= 0:
+            self.agent.allocate_selected_candidates(selected_candidates, usdc_balance)
+            return selected_candidates
+
+        working = list(selected_candidates)
+        while working:
+            self.agent.allocate_selected_candidates(working, usdc_balance)
+
+            below_min = [
+                candidate
+                for candidate in working
+                if candidate.allocation_amount_usdc < self.min_order_amount_usdc
+            ]
+            if not below_min:
+                break
+
+            below_ids = {id(candidate) for candidate in below_min}
+            drop_candidate = None
+            for candidate in reversed(working):
+                if id(candidate) in below_ids:
+                    drop_candidate = candidate
+                    break
+            if drop_candidate is None:
+                break
+
+            attempted_amount = float(drop_candidate.allocation_amount_usdc)
+            drop_candidate.allocation_amount_usdc = 0.0
+            drop_candidate.allocation_fraction = 0.0
+            drop_candidate.execution_status = "SKIPPED_BELOW_MIN_ORDER"
+            drop_candidate.execution_response = (
+                f"allocation={attempted_amount:.6f} below min_order_amount_usdc="
+                f"{self.min_order_amount_usdc:.6f}"
+            )
+            print(
+                f"[allocation] skipped market_id={drop_candidate.market_id} "
+                f"allocation={attempted_amount:.6f} "
+                f"min_order={self.min_order_amount_usdc:.6f}"
+            )
+            working.remove(drop_candidate)
+
+        return selected_candidates
+
+    def _summarize_execution_outcomes(self, candidates: List[CandidateTrade]) -> Dict[str, int]:
+        status_counts: Dict[str, int] = {}
+        for candidate in candidates:
+            status = candidate.execution_status or "UNKNOWN"
+            status_counts[status] = status_counts.get(status, 0) + 1
+        return status_counts
+
+    def _extract_min_order_error_details(self, error_text: str) -> Optional[Dict[str, float]]:
+        match = re.search(
+            r"order\s+\(\$([0-9]*\.?[0-9]+)\),\s*min size:\s*\$([0-9]*\.?[0-9]+)",
+            str(error_text or ""),
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            return None
+        try:
+            return {
+                "attempted_amount_usdc": float(match.group(1)),
+                "minimum_amount_usdc": float(match.group(2)),
+            }
+        except (TypeError, ValueError):
+            return None
 
     def _extract_event_slug_from_url(self, event_url: str) -> str:
         raw_value = str(event_url or "").strip()
@@ -458,7 +558,7 @@ class Trader:
         for error in balance_report.get("errors", []) or []:
             print(f"[portfolio] error={error}")
 
-        selected_candidates = self.agent.allocate_selected_candidates(
+        selected_candidates = self._apply_minimum_order_constraints(
             selected_candidates,
             usdc_balance,
         )
@@ -485,6 +585,25 @@ class Trader:
 
         self._execute_candidates(selected_candidates)
         self._print_trade_summary_table(selected_candidates, mode="EXECUTED")
+        status_counts = self._summarize_execution_outcomes(selected_candidates)
+        executed_count = status_counts.get("EXECUTED", 0)
+        failed_count = (
+            status_counts.get("FAILED", 0)
+            + status_counts.get("FAILED_MIN_ORDER_SIZE", 0)
+        )
+        skipped_count = sum(
+            count
+            for status, count in status_counts.items()
+            if status.startswith("SKIPPED_")
+        )
+        print(
+            "[execution] summary "
+            f"executed={executed_count} failed={failed_count} skipped={skipped_count} "
+            f"status_counts={status_counts}"
+        )
+        if failed_count > 0:
+            print(f"{completion_step}. LIVE RUN completed with execution failures.")
+            return
         print(f"{completion_step}. LIVE RUN complete.")
 
     def _execute_candidates(self, candidates: List[CandidateTrade]) -> None:
@@ -494,6 +613,19 @@ class Trader:
                 candidate.execution_response = "allocation_amount_usdc <= 0"
                 print(
                     f"[execution] skipped rank={idx} market_id={candidate.market_id} reason=zero_allocation"
+                )
+                continue
+
+            if candidate.allocation_amount_usdc < self.min_order_amount_usdc:
+                candidate.execution_status = "SKIPPED_BELOW_MIN_ORDER"
+                candidate.execution_response = (
+                    "allocation_amount_usdc below configured minimum order size "
+                    f"{self.min_order_amount_usdc:.6f}"
+                )
+                print(
+                    f"[execution] skipped rank={idx} market_id={candidate.market_id} "
+                    f"reason=below_min_order allocation={candidate.allocation_amount_usdc:.6f} "
+                    f"min_order={self.min_order_amount_usdc:.6f}"
                 )
                 continue
 
@@ -524,11 +656,26 @@ class Trader:
                     f"transform={token_map['transform']}"
                 )
             except Exception as err:
-                candidate.execution_status = "FAILED"
-                candidate.execution_response = str(err)
-                print(
-                    f"[execution] failed rank={idx} market_id={candidate.market_id} error={err}"
-                )
+                error_text = str(err)
+                min_order_details = self._extract_min_order_error_details(error_text)
+                if min_order_details is not None:
+                    candidate.execution_status = "FAILED_MIN_ORDER_SIZE"
+                    candidate.execution_response = {
+                        "error": error_text,
+                        **min_order_details,
+                    }
+                    print(
+                        f"[execution] failed rank={idx} market_id={candidate.market_id} "
+                        "reason=min_order_size "
+                        f"attempted={min_order_details['attempted_amount_usdc']:.6f} "
+                        f"minimum={min_order_details['minimum_amount_usdc']:.6f}"
+                    )
+                else:
+                    candidate.execution_status = "FAILED"
+                    candidate.execution_response = error_text
+                    print(
+                        f"[execution] failed rank={idx} market_id={candidate.market_id} error={error_text}"
+                    )
                 if not self.continue_on_execution_error:
                     print("[execution] aborting_due_to_failure TRADE_CONTINUE_ON_EXECUTION_ERROR=false")
                     break
@@ -539,6 +686,7 @@ class Trader:
         news_limit: Optional[int] = None,
         news_days: Optional[int] = None,
         news_relevance: Optional[bool] = None,
+        exclude_sports: Optional[bool] = None,
     ) -> None:
         """
         one_best_trade runs the autonomous trading pipeline end-to-end.
@@ -571,6 +719,21 @@ class Trader:
             if not filtered_markets:
                 print("No markets survived filtering. Exiting run.")
                 return
+
+            resolved_exclude_sports = (
+                self.default_exclude_sports if exclude_sports is None else bool(exclude_sports)
+            )
+            if resolved_exclude_sports:
+                before_count = len(filtered_markets)
+                filtered_markets = self._exclude_sports_markets(filtered_markets)
+                excluded_count = before_count - len(filtered_markets)
+                print(
+                    f"[markets] exclude_sports=true excluded={excluded_count} "
+                    f"remaining={len(filtered_markets)}"
+                )
+                if not filtered_markets:
+                    print("No non-sports markets survived filtering. Exiting run.")
+                    return
 
             resolved_include_news = (
                 self.default_include_news if include_news is None else bool(include_news)
@@ -617,6 +780,7 @@ class Trader:
         news_limit: Optional[int] = None,
         news_days: Optional[int] = None,
         news_relevance: Optional[bool] = None,
+        exclude_sports: Optional[bool] = None,
     ) -> None:
         try:
             self.pre_trade_logic()
@@ -673,6 +837,21 @@ class Trader:
             if not filtered_markets:
                 print("No markets survived filtering. Exiting run.")
                 return
+
+            resolved_exclude_sports = (
+                self.default_exclude_sports if exclude_sports is None else bool(exclude_sports)
+            )
+            if resolved_exclude_sports:
+                before_count = len(filtered_markets)
+                filtered_markets = self._exclude_sports_markets(filtered_markets)
+                excluded_count = before_count - len(filtered_markets)
+                print(
+                    f"[markets] exclude_sports=true excluded={excluded_count} "
+                    f"remaining={len(filtered_markets)}"
+                )
+                if not filtered_markets:
+                    print("No non-sports markets survived filtering. Exiting run.")
+                    return
 
             print(
                 "[news] config "
