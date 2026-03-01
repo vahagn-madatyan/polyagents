@@ -646,8 +646,37 @@ volumes:
 | 4.10 | Smart order router | Split large orders, slippage protection | HIGH |
 | 4.11 | WebSocket fill monitor | Real-time fill confirmations | HIGH |
 | 4.12 | Exit manager | TP (edge <2pp), SL (-15%), time-based exits | HIGH |
+| 4.13 | Odd-play execution profile | New `odd_plays` mode: exclude consensus favorites (>80% implied win probability from confidence+data), only execute candidates where top-outcome probability is 50/50 or lower, then rank by edge/liquidity | HIGH |
 
 **Deliverable:** Production-grade risk management. ~80% of signals filtered. Kelly-sized positions with hard limits.
+
+#### Phase 4 Method: Odd Plays (Contrarian Execution Profile)
+
+Goal: find non-consensus opportunities rather than high-consensus favorites.
+
+Execution method (plan only):
+
+1. Build `p_consensus` per market from the debate/superforecaster aggregate, weighted by:
+   - model confidence score
+   - agent agreement ratio
+   - data quality/completeness score
+2. Hard exclusion gate:
+   - Reject any market where `top_outcome_probability > 0.80`.
+3. Odd-play inclusion gate:
+   - Keep only markets where `top_outcome_probability <= 0.50` (50/50 or lower).
+4. Rank retained markets by:
+   - edge vs market-implied probability
+   - liquidity/depth quality
+   - time-to-resolution constraints
+5. Route profile through existing safety controls:
+   - paper-trade gate first for new profile versions
+   - Kelly sizing + global exposure limits
+   - execution circuit breaker on reject/fill failures
+
+Planned rollout:
+- v1: dry-run metrics only (selection rate, hypothetical edge, reject reasons)
+- v2: paper-trade for 30 days
+- v3: limited live budget with hard caps
 
 ---
 
