@@ -6,6 +6,7 @@ import pdb
 import time
 import ast
 import requests
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -25,6 +26,8 @@ from py_clob_client.clob_types import (
     MarketOrderArgs,
     OrderType,
     OrderBookSummary,
+    BalanceAllowanceParams,
+    AssetType,
 )
 from py_clob_client.order_builder.constants import BUY
 
@@ -44,6 +47,8 @@ class Polymarket:
 
         self.chain_id = 137  # POLYGON
         self.private_key = os.getenv("POLYGON_WALLET_PRIVATE_KEY")
+        self.signature_type = int(str(os.getenv("POLYMARKET_SIGNATURE_TYPE", "0")).strip() or "0")
+        self.funder_address = str(os.getenv("POLYMARKET_FUNDER_ADDRESS", "") or "").strip() or None
         self.allow_restricted_events = (
             str(os.getenv("ALLOW_RESTRICTED_EVENTS", "false")).strip().lower()
             in ("1", "true", "yes", "on")
@@ -57,17 +62,38 @@ class Polymarket:
         self.erc20_approve = """[{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"authorizer","type":"address"},{"indexed":true,"internalType":"bytes32","name":"nonce","type":"bytes32"}],"name":"AuthorizationCanceled","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"authorizer","type":"address"},{"indexed":true,"internalType":"bytes32","name":"nonce","type":"bytes32"}],"name":"AuthorizationUsed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"account","type":"address"}],"name":"Blacklisted","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"userAddress","type":"address"},{"indexed":false,"internalType":"address payable","name":"relayerAddress","type":"address"},{"indexed":false,"internalType":"bytes","name":"functionSignature","type":"bytes"}],"name":"MetaTransactionExecuted","type":"event"},{"anonymous":false,"inputs":[],"name":"Pause","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"newRescuer","type":"address"}],"name":"RescuerChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"role","type":"bytes32"},{"indexed":true,"internalType":"bytes32","name":"previousAdminRole","type":"bytes32"},{"indexed":true,"internalType":"bytes32","name":"newAdminRole","type":"bytes32"}],"name":"RoleAdminChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"role","type":"bytes32"},{"indexed":true,"internalType":"address","name":"account","type":"address"},{"indexed":true,"internalType":"address","name":"sender","type":"address"}],"name":"RoleGranted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"role","type":"bytes32"},{"indexed":true,"internalType":"address","name":"account","type":"address"},{"indexed":true,"internalType":"address","name":"sender","type":"address"}],"name":"RoleRevoked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"account","type":"address"}],"name":"UnBlacklisted","type":"event"},{"anonymous":false,"inputs":[],"name":"Unpause","type":"event"},{"inputs":[],"name":"APPROVE_WITH_AUTHORIZATION_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"BLACKLISTER_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"CANCEL_AUTHORIZATION_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"DECREASE_ALLOWANCE_WITH_AUTHORIZATION_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"DEFAULT_ADMIN_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"DEPOSITOR_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"DOMAIN_SEPARATOR","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"EIP712_VERSION","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"INCREASE_ALLOWANCE_WITH_AUTHORIZATION_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"META_TRANSACTION_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"PAUSER_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"PERMIT_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"RESCUER_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"TRANSFER_WITH_AUTHORIZATION_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"WITHDRAW_WITH_AUTHORIZATION_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"uint256","name":"validAfter","type":"uint256"},{"internalType":"uint256","name":"validBefore","type":"uint256"},{"internalType":"bytes32","name":"nonce","type":"bytes32"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"approveWithAuthorization","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"authorizer","type":"address"},{"internalType":"bytes32","name":"nonce","type":"bytes32"}],"name":"authorizationState","outputs":[{"internalType":"enum GasAbstraction.AuthorizationState","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"blacklist","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"blacklisters","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"authorizer","type":"address"},{"internalType":"bytes32","name":"nonce","type":"bytes32"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"cancelAuthorization","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"decrement","type":"uint256"},{"internalType":"uint256","name":"validAfter","type":"uint256"},{"internalType":"uint256","name":"validBefore","type":"uint256"},{"internalType":"bytes32","name":"nonce","type":"bytes32"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"decreaseAllowanceWithAuthorization","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"bytes","name":"depositData","type":"bytes"}],"name":"deposit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"userAddress","type":"address"},{"internalType":"bytes","name":"functionSignature","type":"bytes"},{"internalType":"bytes32","name":"sigR","type":"bytes32"},{"internalType":"bytes32","name":"sigS","type":"bytes32"},{"internalType":"uint8","name":"sigV","type":"uint8"}],"name":"executeMetaTransaction","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"}],"name":"getRoleAdmin","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"getRoleMember","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"}],"name":"getRoleMemberCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"grantRole","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"hasRole","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"increment","type":"uint256"},{"internalType":"uint256","name":"validAfter","type":"uint256"},{"internalType":"uint256","name":"validBefore","type":"uint256"},{"internalType":"bytes32","name":"nonce","type":"bytes32"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"increaseAllowanceWithAuthorization","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"newName","type":"string"},{"internalType":"string","name":"newSymbol","type":"string"},{"internalType":"uint8","name":"newDecimals","type":"uint8"},{"internalType":"address","name":"childChainManager","type":"address"}],"name":"initialize","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"initialized","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"isBlacklisted","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"nonces","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"paused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pausers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"uint256","name":"deadline","type":"uint256"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"permit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"renounceRole","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract IERC20","name":"tokenContract","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"rescueERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"rescuers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"revokeRole","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"uint256","name":"validAfter","type":"uint256"},{"internalType":"uint256","name":"validBefore","type":"uint256"},{"internalType":"bytes32","name":"nonce","type":"bytes32"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"transferWithAuthorization","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"unBlacklist","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"newName","type":"string"},{"internalType":"string","name":"newSymbol","type":"string"}],"name":"updateMetadata","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"uint256","name":"validAfter","type":"uint256"},{"internalType":"uint256","name":"validBefore","type":"uint256"},{"internalType":"bytes32","name":"nonce","type":"bytes32"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"withdrawWithAuthorization","outputs":[],"stateMutability":"nonpayable","type":"function"}]"""
         self.erc1155_set_approval = """[{"inputs": [{ "internalType": "address", "name": "operator", "type": "address" },{ "internalType": "bool", "name": "approved", "type": "bool" }],"name": "setApprovalForAll","outputs": [],"stateMutability": "nonpayable","type": "function"}]"""
 
-        self.usdc_address = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+        self.usdc_address = (
+            str(
+                os.getenv(
+                    "POLYGON_COLLATERAL_USDC_ADDRESS",
+                    "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+                )
+                or ""
+            ).strip()
+            or "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+        )
+        self.native_usdc_address = (
+            str(
+                os.getenv(
+                    "POLYGON_NATIVE_USDC_ADDRESS",
+                    "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+                )
+                or ""
+            ).strip()
+            or "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359"
+        )
+        self.usdc_balance_token_addresses = os.getenv(
+            "USDC_BALANCE_TOKEN_ADDRESSES",
+            "",
+        )
         self.ctf_address = "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045"
 
         self.web3 = Web3(Web3.HTTPProvider(self.polygon_rpc))
         self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-        self.usdc = self.web3.eth.contract(
-            address=self.usdc_address, abi=self.erc20_approve
-        )
+        self.usdc = self._erc20_contract(self.usdc_address)
         self.ctf = self.web3.eth.contract(
-            address=self.ctf_address, abi=self.erc1155_set_approval
+            address=self._as_checksum_address(self.ctf_address), abi=self.erc1155_set_approval
         )
         self.client = None
         self.credentials = None
@@ -77,7 +103,11 @@ class Polymarket:
 
     def _init_api_keys(self) -> None:
         self.client = ClobClient(
-            self.clob_url, key=self.private_key, chain_id=self.chain_id
+            self.clob_url,
+            key=self.private_key,
+            chain_id=self.chain_id,
+            signature_type=self.signature_type,
+            funder=self.funder_address,
         )
         self.credentials = self.client.create_or_derive_api_creds()
         self.client.set_api_creds(self.credentials)
@@ -515,6 +545,182 @@ class Polymarket:
         account = self.w3.eth.account.from_key(str(self.private_key))
         return account.address
 
+    def get_funder_address(self) -> Optional[str]:
+        if not self.funder_address:
+            return None
+        return self._as_checksum_address(self.funder_address)
+
+    def get_balance_owner_address(self) -> str:
+        funder = self.get_funder_address()
+        if funder:
+            return funder
+        return self.get_address_for_private_key()
+
+    @staticmethod
+    def _is_plain_integer(value: str) -> bool:
+        text = str(value or "").strip()
+        return bool(text) and text.isdigit()
+
+    def _as_checksum_address(self, address: str) -> str:
+        return Web3.to_checksum_address(str(address).strip())
+
+    def _erc20_contract(self, token_address: str):
+        return self.web3.eth.contract(
+            address=self._as_checksum_address(token_address),
+            abi=self.erc20_approve,
+        )
+
+    def _token_addresses_for_balance_check(self) -> list[str]:
+        raw_custom_addresses = [
+            item.strip()
+            for item in str(self.usdc_balance_token_addresses or "").split(",")
+            if str(item).strip()
+        ]
+        ordered_addresses = [
+            self.usdc_address,  # Polymarket collateral token (primary source for execution budget)
+            self.native_usdc_address,  # Helpful diagnostic when users fund the wrong USDC token
+            *raw_custom_addresses,
+        ]
+        deduped_addresses = []
+        seen = set()
+        for address in ordered_addresses:
+            try:
+                checksum = self._as_checksum_address(address)
+            except Exception:
+                continue
+            lowered = checksum.lower()
+            if lowered in seen:
+                continue
+            seen.add(lowered)
+            deduped_addresses.append(checksum)
+        return deduped_addresses
+
+    def _read_erc20_balance(self, token_address: str, wallet_address: str) -> dict:
+        contract = self._erc20_contract(token_address)
+        raw_balance = int(contract.functions.balanceOf(wallet_address).call())
+        try:
+            decimals = int(contract.functions.decimals().call())
+        except Exception:
+            decimals = 6
+        divisor = 10 ** max(decimals, 0)
+        normalized_balance = float(raw_balance) / float(divisor)
+        return {
+            "address": self._as_checksum_address(token_address),
+            "raw_balance": raw_balance,
+            "decimals": decimals,
+            "balance_usdc": normalized_balance,
+        }
+
+    def _parse_clob_balance_usdc(self, payload: dict) -> Optional[float]:
+        if not isinstance(payload, dict):
+            return None
+        raw_balance = payload.get("balance")
+        if raw_balance is None:
+            return None
+        raw_text = str(raw_balance).strip()
+        try:
+            if self._is_plain_integer(raw_text):
+                # CLOB balance endpoint typically returns collateral units as 6-decimal fixed integers.
+                return float(int(raw_text)) / 1_000_000.0
+            return float(raw_text)
+        except (TypeError, ValueError):
+            return None
+
+    def get_usdc_balance_report(self) -> dict:
+        report = {
+            "wallet_address": "",
+            "signer_address": "",
+            "funder_address": "",
+            "balance_owner_address": "",
+            "signature_type": self.signature_type,
+            "chain_id": self.chain_id,
+            "rpc_url": self.polygon_rpc,
+            "collateral_address": self._as_checksum_address(self.usdc_address),
+            "balances_by_token": {},
+            "collateral_balance_usdc": 0.0,
+            "clob_balance_usdc": None,
+            "clob_balance_raw": None,
+            "available_usdc_balance": 0.0,
+            "balance_source": "onchain_collateral",
+            "warnings": [],
+            "errors": [],
+        }
+
+        try:
+            signer_address = self.get_address_for_private_key()
+            report["signer_address"] = signer_address
+            funder_address = self.get_funder_address()
+            report["funder_address"] = funder_address or ""
+            wallet_address = funder_address or signer_address
+            report["wallet_address"] = wallet_address
+            report["balance_owner_address"] = wallet_address
+        except Exception as err:
+            report["errors"].append(f"wallet_derivation_failed error={err}")
+            return report
+
+        if self.signature_type in (1, 2) and not report["funder_address"]:
+            report["warnings"].append(
+                "missing_funder_address_for_proxy_signature "
+                "set POLYMARKET_FUNDER_ADDRESS to your Polymarket profile wallet"
+            )
+
+        token_addresses = self._token_addresses_for_balance_check()
+        for token_address in token_addresses:
+            try:
+                token_balance = self._read_erc20_balance(token_address, wallet_address)
+                report["balances_by_token"][token_balance["address"]] = token_balance
+            except Exception as err:
+                report["errors"].append(
+                    f"onchain_balance_failed token={token_address} error={err}"
+                )
+
+        collateral_address = report["collateral_address"]
+        collateral_entry = report["balances_by_token"].get(collateral_address)
+        if collateral_entry is not None:
+            report["collateral_balance_usdc"] = float(collateral_entry["balance_usdc"])
+
+        native_usdc_address = self._as_checksum_address(self.native_usdc_address)
+        native_usdc_entry = report["balances_by_token"].get(native_usdc_address)
+        if (
+            native_usdc_entry is not None
+            and float(native_usdc_entry.get("balance_usdc", 0.0)) > 0
+            and report["collateral_balance_usdc"] <= 0
+        ):
+            report["warnings"].append(
+                "native_usdc_detected_without_collateral_balance "
+                f"native_token={native_usdc_address} collateral_token={collateral_address}"
+            )
+
+        if self.client is not None and self.credentials is not None:
+            try:
+                clob_payload = self.client.get_balance_allowance(
+                    params=BalanceAllowanceParams(asset_type=AssetType.COLLATERAL)
+                )
+                report["clob_balance_raw"] = clob_payload
+                report["clob_balance_usdc"] = self._parse_clob_balance_usdc(clob_payload)
+            except Exception as err:
+                report["errors"].append(f"clob_balance_failed error={err}")
+
+        available_balance = float(report["collateral_balance_usdc"])
+        if available_balance <= 0 and report["clob_balance_usdc"] is not None:
+            available_balance = max(0.0, float(report["clob_balance_usdc"]))
+            report["balance_source"] = "clob_balance_allowance"
+
+        report["available_usdc_balance"] = float(available_balance)
+
+        if (
+            report["clob_balance_usdc"] is not None
+            and report["collateral_balance_usdc"] > 0
+            and abs(float(report["clob_balance_usdc"]) - report["collateral_balance_usdc"]) > 1.0
+        ):
+            report["warnings"].append(
+                "clob_and_onchain_balance_mismatch "
+                f"onchain={report['collateral_balance_usdc']:.6f} "
+                f"clob={float(report['clob_balance_usdc']):.6f}"
+            )
+
+        return report
+
     def build_order(
         self,
         market_token: str,
@@ -619,10 +825,8 @@ class Polymarket:
         return self.execute_market_order_for_token(token_id=token_id, amount=amount)
 
     def get_usdc_balance(self) -> float:
-        balance_res = self.usdc.functions.balanceOf(
-            self.get_address_for_private_key()
-        ).call()
-        return float(balance_res / 10e5)
+        report = self.get_usdc_balance_report()
+        return float(report.get("available_usdc_balance", 0.0))
 
 
 def test():

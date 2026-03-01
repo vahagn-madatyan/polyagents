@@ -15,15 +15,16 @@ Current runtime is a solid base Polymarket agent with:
 These items are documented in `docs/expension/*` but not implemented in runtime yet:
 
 1. Tavily is not in the active trading path.
-2. No LiteLLM router and no Bedrock-first model routing.
-3. No Ollama/local model path for screening.
-4. No multi-agent debate (bull/bear/aggregator); current flow is single-model.
-5. No PostgreSQL/Redis persistence layer for trades/signals/calibration.
-6. No production FastAPI service (server file is a stub).
-7. No production scheduler/timers (cron module is a stub).
-8. No full data pipeline sources (GDELT/FRED/Reddit/538/Dune/WebSocket).
-9. No dashboard stack (Next.js/Supabase/Vercel) in this repo.
-10. No calibration tracking (Brier score), training logger, or retraining loop.
+2. No Polymarket social feed ingestion (comments REST) in trading context.
+3. No LiteLLM router and no Bedrock-first model routing.
+4. No Ollama/local model path for screening.
+5. No multi-agent debate (bull/bear/aggregator); current flow is single-model.
+6. No PostgreSQL/Redis persistence layer for trades/signals/calibration.
+7. No production FastAPI service (server file is a stub).
+8. No production scheduler/timers (cron module is a stub).
+9. No full data pipeline sources (GDELT/FRED/Reddit/538/Dune/WebSocket).
+10. No dashboard stack (Next.js/Supabase/Vercel) in this repo.
+11. No calibration tracking (Brier score), training logger, or retraining loop.
 
 ## Should We Enable Agentic Workflow?
 
@@ -92,6 +93,31 @@ Replace demo-only connector with production pattern:
 4. Deduplicate + summarize into bounded context block per market
 5. Cache results by `(market_id, hour_bucket)` to control cost/latency
 
+## Polymarket Comments REST API (Add Now, Before WebSockets)
+
+Integrate social data immediately using Gamma comments REST endpoints, then add RTDS WebSockets after baseline metrics are stable.
+
+Suggested implementation:
+
+1. Build `connectors/polymarket_comments.py` for paginated comments fetch by entity:
+   - `GET /comments?parent_entity_type=Event&parent_entity_id=<event_id>&limit=<n>&offset=<n>`
+2. Fetch both views per event:
+   - `holders_only=true` (conviction-leaning signal)
+   - `holders_only=false` (full crowd discussion)
+3. Normalize and persist comment records:
+   - `comment_id`, `event_id`, `user`, `created_at`, `body`, `holders_only_view`
+4. Derive features per market/event window (15m/1h/4h):
+   - comment velocity, unique commenters, holder/non-holder ratio, reaction counts if present
+5. Add sentiment/stance scoring to produce bounded social context for forecasting node.
+6. Add conservative quality controls:
+   - dedupe, bot/spam heuristics, max context token budget, stale-data TTL.
+
+Why this first:
+
+- Low complexity vs WebSockets.
+- Immediately improves context freshness around breaking narratives.
+- Creates a clean schema you can reuse when streaming events are added.
+
 ## Implementation Roadmap (Pragmatic)
 
 ### Step 1: Production Foundations
@@ -106,10 +132,11 @@ Replace demo-only connector with production pattern:
 - Switch `Executor` to use LiteLLM router calls.
 - Add fallback chain and timeout/retry budgets.
 
-### Step 3: Agentic Graph + Tavily
+### Step 3: Agentic Graph + Tavily + Polymarket Comments REST
 
 - Move pipeline into LangGraph nodes with typed state.
 - Integrate Tavily search/extract in context node.
+- Integrate Polymarket comments REST enrichment in context node.
 - Add hard risk gate node before execution.
 
 ### Step 4: Multi-Agent Debate (Only After Metrics)
@@ -135,4 +162,3 @@ Phase-1 implementation is successful when:
 3. Dry-run vs live-run differ only at execution node.
 4. Risk gates reject unsafe candidates before any order call.
 5. Calibration and P&L metrics are queryable via API.
-

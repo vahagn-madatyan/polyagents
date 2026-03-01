@@ -94,8 +94,19 @@ This repo is inteded for use with Python 3.9
 
    ```
    POLYGON_WALLET_PRIVATE_KEY=""
+   POLYMARKET_SIGNATURE_TYPE="0"
+   POLYMARKET_FUNDER_ADDRESS=""
    OPENAI_API_KEY=""
+   POLYGON_RPC_URL="https://polygon-rpc.com"
+   POLYGON_COLLATERAL_USDC_ADDRESS="0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+   POLYGON_NATIVE_USDC_ADDRESS="0x3c499c542cef5e3811e1192ce70d8cc03d5c3359"
+   USDC_BALANCE_TOKEN_ADDRESSES=""
    ```
+
+   `POLYMARKET_SIGNATURE_TYPE` values:
+   - `0`: Browser wallet / EOA wallet mode (funder defaults to signer)
+   - `1`: Email / Magic wallet mode (proxy wallet)
+   - `2`: Browser wallet + proxy wallet mode (set `POLYMARKET_FUNDER_ADDRESS` to your profile wallet)
 
 6. Load your wallet with USDC.
 
@@ -177,6 +188,13 @@ Run the full prediction and trade-suggestion pipeline for one specific Polymarke
 - news_limit: Max number of recent news articles queried per market (default: 5).
 - news_days: Lookback window for article search in days (default: 7).
 - news_relevance: Use relevance-sorted body matching for tighter context (default: true). Use `--no-news-relevance` to disable.
+
+`diagnose-usdc-balance`
+Prints the wallet address and USDC balance diagnostics used by live mode, including collateral token checks and fallback sources.
+
+   ```
+   python scripts/python/cli.py diagnose-usdc-balance
+   ```
 
 # Contributing
 

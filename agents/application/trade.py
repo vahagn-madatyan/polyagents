@@ -396,12 +396,50 @@ class Trader:
             print("No candidate trades selected. Exiting run.")
             return
 
+        balance_report = {
+            "wallet_address": "",
+            "collateral_address": "",
+            "balance_source": "unknown",
+            "available_usdc_balance": 0.0,
+            "balances_by_token": {},
+            "warnings": [],
+            "errors": [],
+        }
         try:
-            usdc_balance = self.polymarket.get_usdc_balance()
+            balance_report = self.polymarket.get_usdc_balance_report()
         except Exception as err:
-            usdc_balance = 0.0
-            print(f"[portfolio] unable_to_fetch_usdc_balance error={err}")
-        print(f"[portfolio] usdc_balance={usdc_balance:.6f}")
+            balance_report["errors"].append(f"balance_report_failed error={err}")
+
+        usdc_balance = float(balance_report.get("available_usdc_balance", 0.0))
+        wallet_address = balance_report.get("wallet_address", "") or "n/a"
+        signer_address = balance_report.get("signer_address", "") or "n/a"
+        funder_address = balance_report.get("funder_address", "") or "n/a"
+        signature_type = balance_report.get("signature_type", "n/a")
+        collateral_address = balance_report.get("collateral_address", "") or "n/a"
+        balance_source = balance_report.get("balance_source", "unknown")
+        print(
+            "[portfolio] "
+            f"wallet={wallet_address} "
+            f"signer={signer_address} "
+            f"funder={funder_address} "
+            f"signature_type={signature_type} "
+            f"collateral_token={collateral_address} "
+            f"source={balance_source} "
+            f"usdc_balance={usdc_balance:.6f}"
+        )
+
+        balances_by_token = balance_report.get("balances_by_token") or {}
+        if balances_by_token:
+            formatted_balances = []
+            for token_address, token_data in balances_by_token.items():
+                balance_value = float(token_data.get("balance_usdc", 0.0))
+                formatted_balances.append(f"{token_address}:{balance_value:.6f}")
+            print("[portfolio] onchain_token_balances=" + ", ".join(formatted_balances))
+
+        for warning in balance_report.get("warnings", []) or []:
+            print(f"[portfolio] warning={warning}")
+        for error in balance_report.get("errors", []) or []:
+            print(f"[portfolio] error={error}")
 
         selected_candidates = self.agent.allocate_selected_candidates(
             selected_candidates,
@@ -419,7 +457,13 @@ class Trader:
             return
 
         if usdc_balance <= 0:
-            print(f"{completion_step}. LIVE MODE aborted: no available USDC balance.")
+            print(
+                f"{completion_step}. LIVE MODE aborted: available collateral USDC balance is zero."
+            )
+            print(
+                "[portfolio] verify POLYGON_WALLET_PRIVATE_KEY, POLYGON_RPC_URL, "
+                "and that funds are on the configured collateral token."
+            )
             return
 
         self._execute_candidates(selected_candidates)

@@ -9,7 +9,7 @@ from agents.application.executor import Executor
 from agents.application.creator import Creator
 
 app = typer.Typer()
-polymarket = Polymarket()
+polymarket = Polymarket(initialize_clob_client=False)
 newsapi_client = News()
 polymarket_rag = PolymarketRAG()
 
@@ -135,6 +135,14 @@ def run_autonomous_trader() -> None:
     """
     trader = Trader()
     trader.one_best_trade()
+
+
+@app.command()
+def diagnose_usdc_balance() -> None:
+    """
+    Print wallet and USDC balance diagnostics used by live trading mode.
+    """
+    pprint(polymarket.get_usdc_balance_report())
 
 
 @app.command()
