@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from typing import Optional
 
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.document_loaders import JSONLoader
@@ -54,7 +55,9 @@ class PolymarketRAG:
         response_docs = local_db.similarity_search_with_score(query=query)
         return response_docs
 
-    def events(self, events: "list[SimpleEvent]", prompt: str) -> "list[tuple]":
+    def events(
+        self, events: "list[SimpleEvent]", prompt: str, k: Optional[int] = None
+    ) -> "list[tuple]":
         if not events:
             return []
 
@@ -92,9 +95,12 @@ class PolymarketRAG:
         )
 
         # query
-        return local_db.similarity_search_with_score(query=prompt)
+        search_k = k if isinstance(k, int) and k > 0 else 4
+        return local_db.similarity_search_with_score(query=prompt, k=search_k)
 
-    def markets(self, markets: "list[SimpleMarket]", prompt: str) -> "list[tuple]":
+    def markets(
+        self, markets: "list[SimpleMarket]", prompt: str, k: Optional[int] = None
+    ) -> "list[tuple]":
         if not markets:
             return []
 
@@ -114,6 +120,17 @@ class PolymarketRAG:
             metadata["outcome_prices"] = record.get("outcome_prices")
             metadata["question"] = record.get("question")
             metadata["clob_token_ids"] = record.get("clob_token_ids")
+            metadata["volume"] = record.get("volume")
+            metadata["volume24hr"] = record.get("volume24hr")
+            metadata["volume_clob"] = record.get("volume_clob")
+            metadata["volume24hr_clob"] = record.get("volume24hr_clob")
+            metadata["liquidity"] = record.get("liquidity")
+            metadata["liquidity_clob"] = record.get("liquidity_clob")
+            metadata["category"] = record.get("category")
+            metadata["tags"] = record.get("tags")
+            metadata["event_id"] = record.get("event_id")
+            metadata["event_title"] = record.get("event_title")
+            metadata["event_slug"] = record.get("event_slug")
 
             return metadata
 
@@ -134,4 +151,5 @@ class PolymarketRAG:
         )
 
         # query
-        return local_db.similarity_search_with_score(query=prompt)
+        search_k = k if isinstance(k, int) and k > 0 else 4
+        return local_db.similarity_search_with_score(query=prompt, k=search_k)

@@ -1,0 +1,75 @@
+---
+title: LLM Routing Strategy — Bedrock-First via LiteLLM
+---
+flowchart LR
+    subgraph Pipeline["Trading Pipeline Stages"]
+        Screen["🔍 Market\nScreening\n~50 markets"]
+        RAG["📚 RAG\nFiltering"]
+        Bull["🐂 Bull\nAgent"]
+        Bear["🐻 Bear\nAgent"]
+        Agg["⚖️ Aggregator"]
+        SF["🎯 Super-\nforecaster"]
+        Esc["🚀 High-Edge\nEscalation"]
+        Sent["💬 Sentiment\nAnalysis"]
+        Exit["🚪 Exit\nDecisions"]
+    end
+
+    subgraph Local["LOCAL (Free)"]
+        Qwen8["Ollama/Qwen3-8B"]
+        Qwen14["Ollama/Qwen3-14B"]
+        Mistral["Ollama/Mistral-7B"]
+        FinGPT["Ollama/FinGPT"]
+    end
+
+    subgraph Bedrock["AWS BEDROCK (Primary Paid)"]
+        BHaiku["Bedrock/Claude\nHaiku 3.5"]
+        BSonnet["Bedrock/Claude\nSonnet 4"]
+        BLlama["Bedrock/Llama\n3.3-70B"]
+    end
+
+    subgraph External["EXTERNAL (Fallback)"]
+        GPT4o["OpenAI/GPT-4o"]
+        GPT4om["OpenAI/GPT-4o-mini"]
+        DS["DeepSeek V3\n$0.28/M tokens"]
+        Groq["Groq/Llama\nFree Tier"]
+    end
+
+    Screen -->|primary| Qwen8
+    Screen -.->|fallback 1| BLlama
+    Screen -.->|fallback 2| Groq
+
+    RAG -->|primary| Qwen8
+    RAG -.->|fallback| BLlama
+
+    Bull -->|primary| Qwen14
+    Bull -.->|fallback| DS
+
+    Bear -->|primary| BLlama
+    Bear -.->|fallback 1| Groq
+    Bear -.->|fallback 2| Mistral
+
+    Agg -->|primary| BHaiku
+    Agg -.->|fallback 1| DS
+    Agg -.->|fallback 2| GPT4om
+
+    SF -->|primary| BHaiku
+    SF -.->|fallback| GPT4om
+
+    Esc -->|primary| BSonnet
+    Esc -.->|fallback| GPT4o
+
+    Sent -->|primary| FinGPT
+    Sent -.->|fallback| BHaiku
+
+    Exit -->|primary| BHaiku
+    Exit -.->|fallback| Qwen8
+
+    classDef local fill:#22c55e,stroke:#16a34a,color:#fff
+    classDef bedrock fill:#f97316,stroke:#ea580c,color:#fff
+    classDef external fill:#64748b,stroke:#475569,color:#fff
+    classDef pipeline fill:#1e293b,stroke:#334155,color:#e2e8f0
+
+    class Qwen8,Qwen14,Mistral,FinGPT local
+    class BHaiku,BSonnet,BLlama bedrock
+    class GPT4o,GPT4om,DS,Groq external
+    class Screen,RAG,Bull,Bear,Agg,SF,Esc,Sent,Exit pipeline

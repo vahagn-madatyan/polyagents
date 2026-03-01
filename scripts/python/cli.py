@@ -137,5 +137,24 @@ def run_autonomous_trader() -> None:
     trader.one_best_trade()
 
 
+@app.command()
+def analyze_event_url(
+    event_url: str,
+    news_limit: int = 5,
+    news_days: int = 7,
+    news_relevance: bool = True,
+) -> None:
+    """
+    Run the prediction + trade suggestion pipeline for a specific Polymarket event URL.
+    """
+    trader = Trader()
+    trader.analyze_event_url(
+        event_url=event_url,
+        news_limit=news_limit,
+        news_days=news_days,
+        news_relevance=news_relevance,
+    )
+
+
 if __name__ == "__main__":
     app()

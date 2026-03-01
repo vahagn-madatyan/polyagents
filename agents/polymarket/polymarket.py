@@ -34,7 +34,7 @@ load_dotenv()
 
 
 class Polymarket:
-    def __init__(self) -> None:
+    def __init__(self, initialize_clob_client: bool = True) -> None:
         self.gamma_url = "https://gamma-api.polymarket.com"
         self.gamma_markets_endpoint = self.gamma_url + "/markets"
         self.gamma_events_endpoint = self.gamma_url + "/events"
@@ -69,9 +69,11 @@ class Polymarket:
         self.ctf = self.web3.eth.contract(
             address=self.ctf_address, abi=self.erc1155_set_approval
         )
-
-        self._init_api_keys()
-        self._init_approvals(False)
+        self.client = None
+        self.credentials = None
+        if initialize_clob_client:
+            self._init_api_keys()
+            self._init_approvals(False)
 
     def _init_api_keys(self) -> None:
         self.client = ClobClient(
@@ -232,10 +234,44 @@ class Polymarket:
             except (TypeError, ValueError):
                 return 0.0
 
+        def _list_or_empty(value):
+            if isinstance(value, list):
+                return value
+            if isinstance(value, str):
+                try:
+                    parsed = ast.literal_eval(value)
+                    return parsed if isinstance(parsed, list) else []
+                except Exception:
+                    return []
+            return []
+
+        def _extract_tags(raw_market: dict) -> list[str]:
+            tags = []
+            events = raw_market.get("events") or []
+            for event in events:
+                for tag in event.get("tags") or []:
+                    label = tag.get("label") or tag.get("slug")
+                    if label:
+                        tags.append(str(label))
+            for tag in raw_market.get("tags") or []:
+                label = tag.get("label") or tag.get("slug")
+                if label:
+                    tags.append(str(label))
+            # Keep insertion order while removing duplicates.
+            return list(dict.fromkeys(tags))
+
         market_id = int(market.get("id", 0))
-        outcomes = market.get("outcomes", [])
-        outcome_prices = market.get("outcomePrices", market.get("outcome_prices", []))
-        clob_token_ids = market.get("clobTokenIds", market.get("clob_token_ids", []))
+        outcomes = _list_or_empty(market.get("outcomes", []))
+        outcome_prices = _list_or_empty(
+            market.get("outcomePrices", market.get("outcome_prices", []))
+        )
+        clob_token_ids = _list_or_empty(
+            market.get("clobTokenIds", market.get("clob_token_ids", []))
+        )
+        events = market.get("events") or []
+        first_event = events[0] if events else {}
+        category = str(market.get("category") or "").strip()
+        tags = _extract_tags(market)
 
         if outcome_prices == []:
             print(f"[markets] missing_outcome_prices market_id={market_id}")
@@ -250,14 +286,24 @@ class Polymarket:
             "funded": bool(market.get("funded")),
             "rewardsMinSize": _float_or_zero(market.get("rewardsMinSize")),
             "rewardsMaxSpread": _float_or_zero(market.get("rewardsMaxSpread")),
-            # "volume": float(market["volume"]),
+            "volume": _float_or_zero(market.get("volume", market.get("volumeNum"))),
+            "volume24hr": _float_or_zero(market.get("volume24hr")),
+            "volume_clob": _float_or_zero(market.get("volumeClob")),
+            "volume24hr_clob": _float_or_zero(market.get("volume24hrClob")),
+            "liquidity": _float_or_zero(market.get("liquidity", market.get("liquidityNum"))),
+            "liquidity_clob": _float_or_zero(market.get("liquidityClob")),
             "spread": _float_or_zero(market.get("spread")),
             "outcomes": str(outcomes),
             "outcome_prices": str(outcome_prices),
             "clob_token_ids": str(clob_token_ids),
+            "category": category,
+            "tags": ",".join(tags),
+            "event_id": str(first_event.get("id") or ""),
+            "event_title": str(first_event.get("title") or ""),
+            "event_slug": str(first_event.get("slug") or ""),
         }
         if token_id:
-            mapped_market["clob_token_ids"] = token_id
+            mapped_market["clob_token_ids"] = str([token_id])
         return mapped_market
 
     def get_all_events(self) -> "list[SimpleEvent]":
@@ -445,6 +491,8 @@ class Polymarket:
         return tradeable_events
 
     def get_sampling_simplified_markets(self) -> "list[SimpleEvent]":
+        if self.client is None:
+            raise RuntimeError("CLOB client not initialized")
         markets = []
         raw_sampling_simplified_markets = self.client.get_sampling_simplified_markets()
         for raw_market in raw_sampling_simplified_markets["data"]:
@@ -454,9 +502,13 @@ class Polymarket:
         return markets
 
     def get_orderbook(self, token_id: str) -> OrderBookSummary:
+        if self.client is None:
+            raise RuntimeError("CLOB client not initialized")
         return self.client.get_order_book(token_id)
 
     def get_orderbook_price(self, token_id: str) -> float:
+        if self.client is None:
+            raise RuntimeError("CLOB client not initialized")
         return float(self.client.get_price(token_id))
 
     def get_address_for_private_key(self):
@@ -492,22 +544,79 @@ class Polymarket:
         return order
 
     def execute_order(self, price, size, side, token_id) -> str:
+        if self.client is None:
+            raise RuntimeError("CLOB client not initialized")
         return self.client.create_and_post_order(
             OrderArgs(price=price, size=size, side=side, token_id=token_id)
         )
 
-    def execute_market_order(self, market, amount) -> str:
-        token_id = ast.literal_eval(market[0].dict()["metadata"]["clob_token_ids"])[1]
-        order_args = MarketOrderArgs(
-            token_id=token_id,
-            amount=amount,
-        )
+    def resolve_token_for_outcome(
+        self, outcomes: list, token_ids: list, selected_outcome: str, side: str
+    ) -> dict:
+        if not outcomes or not token_ids:
+            raise ValueError("Cannot resolve token without outcomes and token ids")
+        if len(outcomes) != len(token_ids):
+            raise ValueError(
+                f"Outcome/token length mismatch outcomes={len(outcomes)} token_ids={len(token_ids)}"
+            )
+
+        normalized_outcome_map = {}
+        for idx, outcome in enumerate(outcomes):
+            normalized_outcome_map[str(outcome).strip().lower()] = idx
+
+        selected_index = normalized_outcome_map.get(str(selected_outcome).strip().lower())
+        if selected_index is None:
+            raise ValueError(
+                f"Selected outcome not found in market outcomes selected={selected_outcome!r} outcomes={outcomes}"
+            )
+
+        requested_side = str(side or "BUY").strip().upper()
+        if requested_side not in ("BUY", "SELL"):
+            raise ValueError(f"Unsupported side: {side}")
+
+        execution_side = "BUY"
+        execution_outcome = outcomes[selected_index]
+        token_index = selected_index
+        transform = "NONE"
+
+        # Polymarket market orders buy a token. SELL signals are mapped to opposite BUY for binary markets.
+        if requested_side == "SELL":
+            if len(outcomes) != 2:
+                raise ValueError(
+                    "SELL mapping is only supported for binary markets; got non-binary market"
+                )
+            token_index = 1 - selected_index
+            execution_outcome = outcomes[token_index]
+            transform = "SELL_TO_OPPOSITE_BUY"
+
+        return {
+            "token_id": str(token_ids[token_index]),
+            "execution_side": execution_side,
+            "requested_side": requested_side,
+            "requested_outcome": selected_outcome,
+            "execution_outcome": execution_outcome,
+            "transform": transform,
+        }
+
+    def execute_market_order_for_token(self, token_id: str, amount: float) -> str:
+        if self.client is None:
+            raise RuntimeError("CLOB client not initialized")
+        if amount <= 0:
+            raise ValueError(f"amount must be > 0; got {amount}")
+        order_args = MarketOrderArgs(token_id=str(token_id), amount=float(amount))
         signed_order = self.client.create_market_order(order_args)
         print("Execute market order... signed_order ", signed_order)
         resp = self.client.post_order(signed_order, orderType=OrderType.FOK)
         print(resp)
         print("Done!")
         return resp
+
+    def execute_market_order(self, market, amount) -> str:
+        token_ids = ast.literal_eval(market[0].dict()["metadata"]["clob_token_ids"])
+        if not token_ids:
+            raise ValueError("No token ids available for market order")
+        token_id = token_ids[1] if len(token_ids) > 1 else token_ids[0]
+        return self.execute_market_order_for_token(token_id=token_id, amount=amount)
 
     def get_usdc_balance(self) -> float:
         balance_res = self.usdc.functions.balanceOf(

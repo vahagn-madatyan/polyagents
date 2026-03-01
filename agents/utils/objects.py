@@ -1,6 +1,6 @@
 from __future__ import annotations
-from typing import Optional, Union
-from pydantic import BaseModel
+from typing import Any, Optional, Union
+from pydantic import BaseModel, Field
 
 
 class Trade(BaseModel):
@@ -37,11 +37,21 @@ class SimpleMarket(BaseModel):
     # orderPriceMinTickSize: float
     rewardsMinSize: float
     rewardsMaxSpread: float
-    # volume: Optional[float]
+    volume: Optional[float] = 0.0
+    volume24hr: Optional[float] = 0.0
+    volume_clob: Optional[float] = 0.0
+    volume24hr_clob: Optional[float] = 0.0
+    liquidity: Optional[float] = 0.0
+    liquidity_clob: Optional[float] = 0.0
     spread: float
     outcomes: str
     outcome_prices: str
     clob_token_ids: Optional[str]
+    category: Optional[str] = ""
+    tags: Optional[str] = ""
+    event_id: Optional[str] = ""
+    event_title: Optional[str] = ""
+    event_slug: Optional[str] = ""
 
 
 class ClobReward(BaseModel):
@@ -226,3 +236,26 @@ class Article(BaseModel):
     urlToImage: Optional[str]
     publishedAt: Optional[str]
     content: Optional[str]
+
+
+class CandidateTrade(BaseModel):
+    market_id: int
+    question: str
+    category_bucket: str = "other"
+    outcomes: list[str] = Field(default_factory=list)
+    outcome_prices: list[float] = Field(default_factory=list)
+    token_ids: list[str] = Field(default_factory=list)
+    rag_score: Optional[float] = None
+    probabilities: list[dict[str, Any]] = Field(default_factory=list)
+    suggested_outcome: str = ""
+    parsed_side: str = ""
+    parsed_price: Optional[float] = None
+    parsed_size_fraction: Optional[float] = None
+    confidence_gap: float = 0.0
+    rationale: str = ""
+    risk_factors: list[str] = Field(default_factory=list)
+    counter_case: str = ""
+    allocation_fraction: float = 0.0
+    allocation_amount_usdc: float = 0.0
+    execution_status: str = "NOT_EXECUTED"
+    execution_response: Optional[Any] = None

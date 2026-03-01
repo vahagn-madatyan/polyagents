@@ -105,6 +105,8 @@ class Prompter:
             + f"""
         
         Filter these markets for the ones you will be best at trading on profitably.
+        Prefer markets with meaningful volume and liquidity.
+        Avoid dead/illiquid markets and avoid outcomes priced at extreme tails (near 0 or near 1) unless justified by clear edge.
 
         """
         )
@@ -152,38 +154,31 @@ class Prompter:
         return (
             self.polymarket_analyst_api()
             + f"""
-        
-                Imagine yourself as the top trader on Polymarket, dominating the world of information markets with your keen insights and strategic acumen. You have an extraordinary ability to analyze and interpret data from diverse sources, turning complex information into profitable trading opportunities.
-                You excel in predicting the outcomes of global events, from political elections to economic developments, using a combination of data analysis and intuition. Your deep understanding of probability and statistics allows you to assess market sentiment and make informed decisions quickly.
-                Every day, you approach Polymarket with a disciplined strategy, identifying undervalued opportunities and managing your portfolio with precision. You are adept at evaluating the credibility of information and filtering out noise, ensuring that your trades are based on reliable data.
-                Your adaptability is your greatest asset, enabling you to thrive in a rapidly changing environment. You leverage cutting-edge technology and tools to gain an edge over other traders, constantly seeking innovative ways to enhance your strategies.
-                In your journey on Polymarket, you are committed to continuous learning, staying informed about the latest trends and developments in various sectors. Your emotional intelligence empowers you to remain composed under pressure, making rational decisions even when the stakes are high.
-                Visualize yourself consistently achieving outstanding returns, earning recognition as the top trader on Polymarket. You inspire others with your success, setting new standards of excellence in the world of information markets.
+        You made the following prediction for a market:
+        {prediction}
 
-        """
-            + f"""
-        
-        You made the following prediction for a market: {prediction}
+        The current outcomes are {outcomes}.
+        The current outcome prices are {outcome_prices}.
 
-        The current outcomes ${outcomes} prices are: ${outcome_prices}
+        Return JSON only (no markdown, no prose outside JSON) using this schema:
+        {{
+          "probabilities": [
+            {{"outcome": "<string>", "likelihood": <float between 0 and 1>}}
+          ],
+          "selected_outcome": "<string outcome from outcomes>",
+          "side": "<BUY or SELL>",
+          "price": <float between 0 and 1>,
+          "size_fraction": <float between 0 and 1>,
+          "rationale": "<short concise reasoning summary>",
+          "risk_factors": ["<short risk factor 1>", "<short risk factor 2>"],
+          "counter_case": "<short concise opposing view>"
+        }}
 
-        Given your prediction, respond with a genius trade in the format:
-        `
-            price:'price_on_the_orderbook',
-            size:'percentage_of_total_funds',
-            side: BUY or SELL,
-        `
-
-        Your trade should approximate price using the likelihood in your prediction.
-
-        Example response:
-
-        RESPONSE```
-            price:0.5,
-            size:0.1,
-            side:BUY,
-        ```
-        
+        Constraints:
+        - Keep rationale and counter_case concise (1-2 sentences each).
+        - Provide at most 3 risk_factors.
+        - Probabilities should correspond to listed outcomes and sum close to 1.
+        - Do not output hidden chain-of-thought. Output only concise summaries.
         """
         )
 
