@@ -29,11 +29,24 @@ def get_all_markets(limit: int = 5, sort_by: str = "spread") -> None:
 
 
 @app.command()
-def get_relevant_news(keywords: str) -> None:
+def get_relevant_news(
+    keywords: str, limit: int = 10, days: int = 7, relevance: bool = False
+) -> None:
     """
     Use NewsAPI to query the internet
     """
-    articles = newsapi_client.get_articles_for_cli_keywords(keywords)
+    articles, used_fallback = newsapi_client.get_articles_for_cli_keywords(
+        keywords=keywords, limit=limit, days=days, relevance=relevance
+    )
+    if relevance:
+        print(
+            f"Using global relevance search in article bodies from the last {max(days, 1)} day(s)."
+        )
+    elif used_fallback:
+        print(
+            f"No US top headlines matched '{keywords}'. "
+            f"Showing global results from the last {max(days, 1)} day(s)."
+        )
     pprint(articles)
 
 

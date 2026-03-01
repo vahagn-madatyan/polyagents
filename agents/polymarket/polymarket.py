@@ -44,7 +44,11 @@ class Polymarket:
 
         self.chain_id = 137  # POLYGON
         self.private_key = os.getenv("POLYGON_WALLET_PRIVATE_KEY")
-        self.polygon_rpc = "https://polygon-rpc.com"
+        self.allow_restricted_events = (
+            str(os.getenv("ALLOW_RESTRICTED_EVENTS", "false")).strip().lower()
+            in ("1", "true", "yes", "on")
+        )
+        self.polygon_rpc = os.getenv("POLYGON_RPC_URL", "https://polygon-rpc.com")
         self.w3 = Web3(Web3.HTTPProvider(self.polygon_rpc))
 
         self.exchange_address = "0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e"
@@ -211,80 +215,234 @@ class Polymarket:
         res = httpx.get(self.gamma_markets_endpoint, params=params)
         if res.status_code == 200:
             data = res.json()
+            if not data:
+                print(f"[markets] no_market_found_for_token token_id={token_id}")
+                return None
             market = data[0]
             return self.map_api_to_market(market, token_id)
+        print(
+            f"[markets] request_failed status={res.status_code} token_id={token_id} params={params}"
+        )
+        return None
 
     def map_api_to_market(self, market, token_id: str = "") -> SimpleMarket:
-        market = {
-            "id": int(market["id"]),
-            "question": market["question"],
-            "end": market["endDate"],
-            "description": market["description"],
-            "active": market["active"],
+        def _float_or_zero(value):
+            try:
+                return float(value) if value is not None else 0.0
+            except (TypeError, ValueError):
+                return 0.0
+
+        market_id = int(market.get("id", 0))
+        outcomes = market.get("outcomes", [])
+        outcome_prices = market.get("outcomePrices", market.get("outcome_prices", []))
+        clob_token_ids = market.get("clobTokenIds", market.get("clob_token_ids", []))
+
+        if outcome_prices == []:
+            print(f"[markets] missing_outcome_prices market_id={market_id}")
+
+        mapped_market = {
+            "id": market_id,
+            "question": market.get("question", ""),
+            "end": market.get("endDate", ""),
+            "description": market.get("description", ""),
+            "active": bool(market.get("active")),
             # "deployed": market["deployed"],
-            "funded": market["funded"],
-            "rewardsMinSize": float(market["rewardsMinSize"]),
-            "rewardsMaxSpread": float(market["rewardsMaxSpread"]),
+            "funded": bool(market.get("funded")),
+            "rewardsMinSize": _float_or_zero(market.get("rewardsMinSize")),
+            "rewardsMaxSpread": _float_or_zero(market.get("rewardsMaxSpread")),
             # "volume": float(market["volume"]),
-            "spread": float(market["spread"]),
-            "outcomes": str(market["outcomes"]),
-            "outcome_prices": str(market["outcomePrices"]),
-            "clob_token_ids": str(market["clobTokenIds"]),
+            "spread": _float_or_zero(market.get("spread")),
+            "outcomes": str(outcomes),
+            "outcome_prices": str(outcome_prices),
+            "clob_token_ids": str(clob_token_ids),
         }
         if token_id:
-            market["clob_token_ids"] = token_id
-        return market
+            mapped_market["clob_token_ids"] = token_id
+        return mapped_market
 
     def get_all_events(self) -> "list[SimpleEvent]":
         events = []
-        res = httpx.get(self.gamma_events_endpoint)
-        if res.status_code == 200:
-            print(len(res.json()))
-            for event in res.json():
+        raw_events = []
+        limit = 200
+        offset = 0
+        page = 0
+
+        while True:
+            page += 1
+            params = {
+                "active": True,
+                "closed": False,
+                "archived": False,
+                "limit": limit,
+                "offset": offset,
+            }
+            res = httpx.get(self.gamma_events_endpoint, params=params)
+            if res.status_code != 200:
+                print(
+                    f"[events] request_failed status={res.status_code} url={self.gamma_events_endpoint} params={params}"
+                )
+                break
+
+            batch = res.json()
+            raw_events.extend(batch)
+            print(
+                f"[events] page={page} fetched_batch={len(batch)} offset={offset} params={params}"
+            )
+
+            if len(batch) < limit:
+                break
+            offset += limit
+
+        if raw_events:
+            print(
+                f"[events] fetched_total={len(raw_events)} from={self.gamma_events_endpoint}"
+            )
+
+            active_count = 0
+            closed_count = 0
+            archived_count = 0
+            restricted_count = 0
+            status_combo_counts = {}
+            for event in raw_events:
+                active = bool(event.get("active"))
+                closed = bool(event.get("closed"))
+                archived = bool(event.get("archived"))
+                restricted = bool(event.get("restricted"))
+                if active:
+                    active_count += 1
+                if closed:
+                    closed_count += 1
+                if archived:
+                    archived_count += 1
+                if restricted:
+                    restricted_count += 1
+
+                key = (active, closed, archived, restricted)
+                status_combo_counts[key] = status_combo_counts.get(key, 0) + 1
+
+            print(
+                "[events] raw_flags "
+                f"active={active_count} "
+                f"closed={closed_count} "
+                f"archived={archived_count} "
+                f"restricted={restricted_count}"
+            )
+            sorted_combos = sorted(
+                status_combo_counts.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+            for combo, count in sorted_combos[:5]:
+                active, closed, archived, restricted = combo
+                print(
+                    "[events] raw_combo "
+                    f"count={count} "
+                    f"active={active} closed={closed} archived={archived} restricted={restricted}"
+                )
+
+            parse_errors = 0
+            for event in raw_events:
                 try:
-                    print(1)
                     event_data = self.map_api_to_event(event)
                     events.append(SimpleEvent(**event_data))
                 except Exception as e:
-                    print(e)
-                    pass
+                    parse_errors += 1
+                    event_id = event.get("id", "unknown")
+                    title = event.get("title", "")
+                    print(
+                        f"[events] parse_error id={event_id} title={title!r}: {e}"
+                    )
+
+            print(f"[events] parsed={len(events)} parse_errors={parse_errors}")
+        else:
+            print("[events] no_raw_events_returned")
         return events
 
     def map_api_to_event(self, event) -> SimpleEvent:
         description = event["description"] if "description" in event.keys() else ""
+        end = event.get("endDate") or ""
+        markets = event.get("markets") or []
         return {
             "id": int(event["id"]),
-            "ticker": event["ticker"],
-            "slug": event["slug"],
-            "title": event["title"],
+            "ticker": event.get("ticker") or "",
+            "slug": event.get("slug") or "",
+            "title": event.get("title") or "",
             "description": description,
-            "active": event["active"],
-            "closed": event["closed"],
-            "archived": event["archived"],
-            "new": event["new"],
-            "featured": event["featured"],
-            "restricted": event["restricted"],
-            "end": event["endDate"],
-            "markets": ",".join([x["id"] for x in event["markets"]]),
+            "active": bool(event.get("active")),
+            "closed": bool(event.get("closed")),
+            "archived": bool(event.get("archived")),
+            "new": bool(event.get("new")),
+            "featured": bool(event.get("featured")),
+            "restricted": bool(event.get("restricted")),
+            "end": end,
+            "markets": ",".join([str(x.get("id", "")) for x in markets if x.get("id")]),
         }
 
     def filter_events_for_trading(
         self, events: "list[SimpleEvent]"
     ) -> "list[SimpleEvent]":
         tradeable_events = []
+        excluded_inactive = 0
+        excluded_restricted = 0
+        excluded_archived = 0
+        excluded_closed = 0
+        excluded_samples = []
+
         for event in events:
+            excluded_reasons = []
+            if not event.active:
+                excluded_inactive += 1
+                excluded_reasons.append("inactive")
+            if event.restricted:
+                excluded_restricted += 1
+                excluded_reasons.append("restricted")
+            if event.archived:
+                excluded_archived += 1
+                excluded_reasons.append("archived")
+            if event.closed:
+                excluded_closed += 1
+                excluded_reasons.append("closed")
+
             if (
                 event.active
-                and not event.restricted
+                and (self.allow_restricted_events or not event.restricted)
                 and not event.archived
                 and not event.closed
             ):
                 tradeable_events.append(event)
+            elif len(excluded_samples) < 5:
+                excluded_samples.append(
+                    {
+                        "id": event.id,
+                        "title": event.title,
+                        "reasons": ",".join(excluded_reasons),
+                    }
+                )
+
+        print(
+            "[events] filter_summary "
+            f"input={len(events)} "
+            f"tradeable={len(tradeable_events)} "
+            f"allow_restricted={self.allow_restricted_events} "
+            f"excluded_inactive={excluded_inactive} "
+            f"excluded_restricted={excluded_restricted} "
+            f"excluded_archived={excluded_archived} "
+            f"excluded_closed={excluded_closed}"
+        )
+        for sample in excluded_samples:
+            print(
+                "[events] excluded_sample "
+                f"id={sample['id']} title={sample['title']!r} reasons={sample['reasons']}"
+            )
         return tradeable_events
 
     def get_all_tradeable_events(self) -> "list[SimpleEvent]":
         all_events = self.get_all_events()
-        return self.filter_events_for_trading(all_events)
+        tradeable_events = self.filter_events_for_trading(all_events)
+        print(
+            f"[events] tradeable_total={len(tradeable_events)} from_parsed={len(all_events)}"
+        )
+        return tradeable_events
 
     def get_sampling_simplified_markets(self) -> "list[SimpleEvent]":
         markets = []

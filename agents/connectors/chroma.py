@@ -55,6 +55,9 @@ class PolymarketRAG:
         return response_docs
 
     def events(self, events: "list[SimpleEvent]", prompt: str) -> "list[tuple]":
+        if not events:
+            return []
+
         # create local json file
         local_events_directory: str = "./local_db_events"
         if not os.path.isdir(local_events_directory):
@@ -80,6 +83,8 @@ class PolymarketRAG:
             metadata_func=metadata_func,
         )
         loaded_docs = loader.load()
+        if not loaded_docs:
+            return []
         embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
         vector_db_directory = f"{local_events_directory}/chroma"
         local_db = Chroma.from_documents(
@@ -90,6 +95,9 @@ class PolymarketRAG:
         return local_db.similarity_search_with_score(query=prompt)
 
     def markets(self, markets: "list[SimpleMarket]", prompt: str) -> "list[tuple]":
+        if not markets:
+            return []
+
         # create local json file
         local_events_directory: str = "./local_db_markets"
         if not os.path.isdir(local_events_directory):
@@ -117,6 +125,8 @@ class PolymarketRAG:
             metadata_func=metadata_func,
         )
         loaded_docs = loader.load()
+        if not loaded_docs:
+            return []
         embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
         vector_db_directory = f"{local_events_directory}/chroma"
         local_db = Chroma.from_documents(
