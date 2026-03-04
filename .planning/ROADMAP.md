@@ -29,11 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Bot parses game state into structured `SportGameState` objects with correct score, period, elapsed, live, and ended fields for NFL, NBA, MLB, NHL, CFB, CBB, soccer, esports, and tennis events
   4. Bot logs a period/quarter transition event and triggers trade re-evaluation at each detected transition
   5. Bot applies configurable rules for overtime, rain delays, and forfeits — halting new orders rather than trading on suspended/ambiguous markets
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 01-01: Implement `SportGameState` Pydantic model and `SportsWS` asyncio connector with heartbeat
-- [ ] 01-02: Add reconnect logic, message-gap watchdog, and edge-case game status handling
+- [ ] 01-01-PLAN.md — SportGameState model, SportsWSConnector with ping handling, message parsing, period transition detection
+- [ ] 01-02-PLAN.md — Reconnect with exponential backoff, watchdog freeze detection, edge-case status handling, ended game TTL purge
 
 ### Phase 2: Market Discovery and Pipeline Architecture
 **Goal**: The bot identifies which Polymarket markets correspond to each active game (via slug-based Gamma lookup, bypassing Chroma RAG), integrates the external sports data API for team stats and odds, and enforces a configurable budget split between sports and general trading with race-condition protection.
