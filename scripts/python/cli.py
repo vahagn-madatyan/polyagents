@@ -192,5 +192,79 @@ def analyze_event_url(
     )
 
 
+@app.command()
+def run_continuous(
+    interval: int = 30,
+    session_budget: float = 100.0,
+    cooldown: int = 300,
+    include_news: bool = False,
+    exclude_sports: bool = False,
+    news_limit: int = 5,
+    news_days: int = 7,
+    news_relevance: bool = True,
+    volatility_threshold: float = 0.05,
+) -> None:
+    """
+    Run continuous high-speed trading loop. Trades on trending and breaking events
+    every INTERVAL seconds until session budget is exhausted or Ctrl+C.
+    """
+    from agents.application.continuous import start_continuous
+
+    start_continuous(
+        interval=interval,
+        session_budget=session_budget,
+        cooldown=cooldown,
+        include_news=include_news,
+        exclude_sports=exclude_sports,
+        news_limit=news_limit,
+        news_days=news_days,
+        news_relevance=news_relevance,
+        volatility_threshold=volatility_threshold,
+    )
+
+
+@app.command()
+def run_crypto(
+    interval: int = 30,
+    session_budget: float = 100.0,
+    symbols: str = "BTC,ETH,SOL,XRP",
+    min_edge: float = 0.05,
+) -> None:
+    """
+    Trade crypto price prediction markets using live WebSocket price feeds.
+    Uses real-time BTC/ETH/SOL/XRP prices + LLM analysis to find mispriced markets.
+    """
+    from agents.application.crypto import start_crypto
+
+    start_crypto(
+        interval=interval,
+        session_budget=session_budget,
+        symbols=symbols,
+        min_edge=min_edge,
+    )
+
+
+@app.command()
+def run_crypto_arbitrage(
+    session_budget: float = 50.0,
+    max_per_trade: float = 5.0,
+    min_edge: float = 0.10,
+    price_feed_tolerance: float = 0.001,
+) -> None:
+    """
+    Algorithmic BTC 5-minute interval market arbitrage. No LLM - pure price momentum.
+    Uses dual Binance + Chainlink feeds for cross-validation.
+    Runs on 15-second intervals to catch short-duration markets.
+    """
+    from agents.application.btc_arbitrage import start_btc_arbitrage
+
+    start_btc_arbitrage(
+        session_budget=session_budget,
+        max_per_trade=max_per_trade,
+        min_edge=min_edge,
+        price_feed_tolerance=price_feed_tolerance,
+    )
+
+
 if __name__ == "__main__":
     app()
