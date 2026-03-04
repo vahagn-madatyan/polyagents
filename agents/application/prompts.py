@@ -218,6 +218,58 @@ class Prompter:
         
         """
 
+    def crypto_price_analyst(
+        self,
+        symbol: str,
+        current_price: float,
+        target_price: float,
+        direction: str,
+        momentum_1m: float,
+        momentum_5m: float,
+        momentum_15m: float,
+        time_remaining_hours: float,
+        market_yes_price: float,
+        market_no_price: float,
+    ) -> str:
+        return (
+            self.polymarket_analyst_api()
+            + f"""
+        You are analyzing a crypto price prediction market.
+
+        Asset: {symbol}
+        Current live price: ${current_price:,.2f}
+        Market question: Will {symbol} be {direction} ${target_price:,.2f}?
+        Time remaining: {time_remaining_hours:.1f} hours
+
+        Live price momentum:
+        - 1-minute momentum: {momentum_1m:+.4f} ({momentum_1m*100:+.2f}%)
+        - 5-minute momentum: {momentum_5m:+.4f} ({momentum_5m*100:+.2f}%)
+        - 15-minute momentum: {momentum_15m:+.4f} ({momentum_15m*100:+.2f}%)
+
+        Current market odds:
+        - Yes price: {market_yes_price:.4f} (implied {market_yes_price*100:.1f}% probability)
+        - No price: {market_no_price:.4f} (implied {market_no_price*100:.1f}% probability)
+
+        Distance to target: {abs(current_price - target_price) / current_price * 100:.2f}% {'above' if current_price > target_price else 'below'} target
+
+        Based on the live price data, momentum, and market odds, is this market mispriced?
+        Return JSON only (no markdown, no prose outside JSON) using this schema:
+        {{
+          "probabilities": [
+            {{"outcome": "Yes", "likelihood": <float between 0 and 1>}},
+            {{"outcome": "No", "likelihood": <float between 0 and 1>}}
+          ],
+          "selected_outcome": "<Yes or No>",
+          "side": "<BUY or SELL>",
+          "price": <float between 0 and 1>,
+          "size_fraction": <float between 0 and 1>,
+          "rationale": "<short concise reasoning based on price data and momentum>",
+          "risk_factors": ["<risk 1>", "<risk 2>"],
+          "counter_case": "<short opposing view>"
+        }}
+        """
+        )
+
     def create_new_market(self, filtered_markets: str) -> str:
         return f"""
         {filtered_markets}
