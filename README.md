@@ -215,6 +215,9 @@ Run `--help` on any command for full usage:
 - `diagnose-usdc-balance`
 - `run-autonomous-trader [--event-url URL] [--include-news|--no-include-news] [--news-limit 5] [--news-days 7] [--news-relevance|--no-news-relevance] [--exclude-sports|--no-exclude-sports]`
 - `analyze-event-url <event_url> [--news-limit 5] [--news-days 7] [--news-relevance|--no-news-relevance] [--exclude-sports|--no-exclude-sports]`
+- `run-continuous [--interval 30] [--session-budget 100] [--cooldown 300] [--include-news] [--exclude-sports] [--volatility-threshold 0.05]`
+- `run-crypto [--interval 30] [--session-budget 100] [--symbols BTC,ETH,SOL,XRP] [--min-edge 0.05]`
+- `run-crypto-arbitrage [--session-budget 50] [--max-per-trade 5] [--min-edge 0.10] [--price-feed-tolerance 0.001]`
 
 #### Trading command examples
 
@@ -251,12 +254,49 @@ PYTHONPATH=. python scripts/python/cli.py analyze-event-url \
   --news-relevance
 ```
 
+#### Live trading modes
+
+`run-continuous` (high-speed loop across all market categories):
+
+```
+PYTHONPATH=. python scripts/python/cli.py run-continuous \
+  --interval 30 \
+  --session-budget 100 \
+  --cooldown 300 \
+  --include-news \
+  --exclude-sports
+```
+
+`run-crypto` (crypto price prediction markets with live WebSocket prices):
+
+```
+PYTHONPATH=. python scripts/python/cli.py run-crypto \
+  --interval 30 \
+  --session-budget 100 \
+  --symbols BTC,ETH,SOL \
+  --min-edge 0.05
+```
+
+`run-crypto-arbitrage` (algorithmic BTC 5-minute markets, no LLM):
+
+```
+PYTHONPATH=. python scripts/python/cli.py run-crypto-arbitrage \
+  --session-budget 50 \
+  --max-per-trade 5 \
+  --min-edge 0.10
+```
+
+All live trading modes run until the session budget is exhausted or you press Ctrl+C. They respect `EXECUTE_TRADES=false` for dry-run mode.
+
 #### Live-mode and safety flags
 
 - `EXECUTE_TRADES=false` is the default. Set `EXECUTE_TRADES=true` to place live orders.
 - `TRADE_MIN_ORDER_AMOUNT_USDC=1.0` skips allocations below this threshold before execution.
 - `TRADE_CONTINUE_ON_EXECUTION_ERROR=true` controls whether execution stops on first failed order.
 - `TRADE_INCLUDE_NEWS`, `TRADE_NEWS_LIMIT`, `TRADE_NEWS_DAYS`, `TRADE_NEWS_RELEVANCE`, and `TRADE_EXCLUDE_SPORTS` provide environment-level defaults that CLI flags can override.
+- `CONTINUOUS_INTERVAL_SECONDS`, `CONTINUOUS_SESSION_BUDGET`, `CONTINUOUS_COOLDOWN_SECONDS`, `CONTINUOUS_VOLATILITY_THRESHOLD` configure continuous mode defaults.
+- `CRYPTO_INTERVAL_SECONDS`, `CRYPTO_SESSION_BUDGET`, `CRYPTO_SYMBOLS`, `CRYPTO_MIN_EDGE` configure crypto mode defaults.
+- `ARB_SESSION_BUDGET`, `ARB_MAX_PER_TRADE`, `ARB_MIN_EDGE`, `ARB_PRICE_FEED_TOLERANCE` configure BTC arbitrage mode defaults.
 
 # Contributing
 
