@@ -1,6 +1,14 @@
 repos:
--   repo: https://github.com/psf/black
+  - repo: https://github.com/psf/black
     rev: 24.4.2
     hooks:
-    - id: black
-      language_version: python3.9
+      - id: black
+        language_version: python3.9
+
+  - repo: local
+    hooks:
+      - id: secret-scan
+        name: secret-scan
+        entry: python3 scripts/python/scan_secrets.py
+        language: system
+        types: [text]

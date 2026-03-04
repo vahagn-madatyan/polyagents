@@ -47,12 +47,15 @@ class Polymarket:
 
         self.chain_id = 137  # POLYGON
         self.private_key = os.getenv("POLYGON_WALLET_PRIVATE_KEY")
-        self.signature_type = int(str(os.getenv("POLYMARKET_SIGNATURE_TYPE", "0")).strip() or "0")
-        self.funder_address = str(os.getenv("POLYMARKET_FUNDER_ADDRESS", "") or "").strip() or None
-        self.allow_restricted_events = (
-            str(os.getenv("ALLOW_RESTRICTED_EVENTS", "false")).strip().lower()
-            in ("1", "true", "yes", "on")
+        self.signature_type = int(
+            str(os.getenv("POLYMARKET_SIGNATURE_TYPE", "0")).strip() or "0"
         )
+        self.funder_address = (
+            str(os.getenv("POLYMARKET_FUNDER_ADDRESS", "") or "").strip() or None
+        )
+        self.allow_restricted_events = str(
+            os.getenv("ALLOW_RESTRICTED_EVENTS", "false")
+        ).strip().lower() in ("1", "true", "yes", "on")
         self.polygon_rpc = os.getenv("POLYGON_RPC_URL", "https://polygon-rpc.com")
         self.w3 = Web3(Web3.HTTPProvider(self.polygon_rpc))
 
@@ -93,7 +96,8 @@ class Polymarket:
 
         self.usdc = self._erc20_contract(self.usdc_address)
         self.ctf = self.web3.eth.contract(
-            address=self._as_checksum_address(self.ctf_address), abi=self.erc1155_set_approval
+            address=self._as_checksum_address(self.ctf_address),
+            abi=self.erc1155_set_approval,
         )
         self.client = None
         self.credentials = None
@@ -320,7 +324,9 @@ class Polymarket:
             "volume24hr": _float_or_zero(market.get("volume24hr")),
             "volume_clob": _float_or_zero(market.get("volumeClob")),
             "volume24hr_clob": _float_or_zero(market.get("volume24hrClob")),
-            "liquidity": _float_or_zero(market.get("liquidity", market.get("liquidityNum"))),
+            "liquidity": _float_or_zero(
+                market.get("liquidity", market.get("liquidityNum"))
+            ),
             "liquidity_clob": _float_or_zero(market.get("liquidityClob")),
             "spread": _float_or_zero(market.get("spread")),
             "outcomes": str(outcomes),
@@ -425,9 +431,7 @@ class Polymarket:
                     parse_errors += 1
                     event_id = event.get("id", "unknown")
                     title = event.get("title", "")
-                    print(
-                        f"[events] parse_error id={event_id} title={title!r}: {e}"
-                    )
+                    print(f"[events] parse_error id={event_id} title={title!r}: {e}")
 
             print(f"[events] parsed={len(events)} parse_errors={parse_errors}")
         else:
@@ -697,7 +701,9 @@ class Polymarket:
                     params=BalanceAllowanceParams(asset_type=AssetType.COLLATERAL)
                 )
                 report["clob_balance_raw"] = clob_payload
-                report["clob_balance_usdc"] = self._parse_clob_balance_usdc(clob_payload)
+                report["clob_balance_usdc"] = self._parse_clob_balance_usdc(
+                    clob_payload
+                )
             except Exception as err:
                 report["errors"].append(f"clob_balance_failed error={err}")
 
@@ -711,7 +717,10 @@ class Polymarket:
         if (
             report["clob_balance_usdc"] is not None
             and report["collateral_balance_usdc"] > 0
-            and abs(float(report["clob_balance_usdc"]) - report["collateral_balance_usdc"]) > 1.0
+            and abs(
+                float(report["clob_balance_usdc"]) - report["collateral_balance_usdc"]
+            )
+            > 1.0
         ):
             report["warnings"].append(
                 "clob_and_onchain_balance_mismatch "
@@ -770,7 +779,9 @@ class Polymarket:
         for idx, outcome in enumerate(outcomes):
             normalized_outcome_map[str(outcome).strip().lower()] = idx
 
-        selected_index = normalized_outcome_map.get(str(selected_outcome).strip().lower())
+        selected_index = normalized_outcome_map.get(
+            str(selected_outcome).strip().lower()
+        )
         if selected_index is None:
             raise ValueError(
                 f"Selected outcome not found in market outcomes selected={selected_outcome!r} outcomes={outcomes}"

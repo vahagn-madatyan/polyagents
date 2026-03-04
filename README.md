@@ -273,6 +273,12 @@ Please run pre-commit hooks before making contributions. To initialize them:
    pre-commit install
    ```
 
+Run all hooks (including the secret scan) before opening a PR:
+
+   ```
+   pre-commit run --all-files
+   ```
+
 # Related Repos
 
 - [py-clob-client](https://github.com/Polymarket/py-clob-client): Python client for the Polymarket CLOB

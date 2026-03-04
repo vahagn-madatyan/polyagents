@@ -187,14 +187,18 @@ def select_soft_quota_candidates(
     selected_ids = set()
     selected_categories = set()
 
-    while len(selected) < target_count and len(selected_categories) < max(0, min_categories):
+    while len(selected) < target_count and len(selected_categories) < max(
+        0, min_categories
+    ):
         best_next = None
         for candidate in ranked:
             if candidate.market_id in selected_ids:
                 continue
             if candidate.category_bucket in selected_categories:
                 continue
-            if best_next is None or _candidate_score_key(candidate) < _candidate_score_key(best_next):
+            if best_next is None or _candidate_score_key(
+                candidate
+            ) < _candidate_score_key(best_next):
                 best_next = candidate
         if best_next is None:
             break
@@ -301,8 +305,7 @@ def _allocate_with_bounds(
             target_add = {idx: per_idx for idx in active}
         else:
             target_add = {
-                idx: remaining * (weights[idx] / active_weight)
-                for idx in active
+                idx: remaining * (weights[idx] / active_weight) for idx in active
             }
 
         distributed = 0.0
@@ -352,14 +355,24 @@ class Executor:
 
         self.trade_candidate_count = _env_int("TRADE_CANDIDATE_COUNT", 5)
         self.trade_diversity_mode = os.getenv("TRADE_DIVERSITY_MODE", "soft_quota")
-        self.trade_diversity_min_categories = _env_int("TRADE_DIVERSITY_MIN_CATEGORIES", 3)
+        self.trade_diversity_min_categories = _env_int(
+            "TRADE_DIVERSITY_MIN_CATEGORIES", 3
+        )
         self.trade_max_markets_to_score = _env_int("TRADE_MAX_MARKETS_TO_SCORE", 20)
-        self.trade_total_budget_fraction = _env_float("TRADE_TOTAL_BUDGET_FRACTION", 0.30)
-        self.trade_max_per_market_fraction = _env_float("TRADE_MAX_PER_MARKET_FRACTION", 0.10)
-        self.trade_min_per_market_fraction = _env_float("TRADE_MIN_PER_MARKET_FRACTION", 0.02)
+        self.trade_total_budget_fraction = _env_float(
+            "TRADE_TOTAL_BUDGET_FRACTION", 0.30
+        )
+        self.trade_max_per_market_fraction = _env_float(
+            "TRADE_MAX_PER_MARKET_FRACTION", 0.10
+        )
+        self.trade_min_per_market_fraction = _env_float(
+            "TRADE_MIN_PER_MARKET_FRACTION", 0.02
+        )
         self.trade_log_rationale = _env_bool("TRADE_LOG_RATIONALE", True)
         self.trade_min_market_volume = _env_float("TRADE_MIN_MARKET_VOLUME", 10000.0)
-        self.trade_min_market_liquidity = _env_float("TRADE_MIN_MARKET_LIQUIDITY", 5000.0)
+        self.trade_min_market_liquidity = _env_float(
+            "TRADE_MIN_MARKET_LIQUIDITY", 5000.0
+        )
         self.trade_min_entry_price = _env_float("TRADE_MIN_ENTRY_PRICE", 0.03)
         self.trade_max_entry_price = _env_float("TRADE_MAX_ENTRY_PRICE", 0.97)
 
@@ -400,7 +413,9 @@ class Executor:
         if not supports_custom_temperature:
             # GPT-5 models only accept default temperature behavior via value 1.
             llm_kwargs["temperature"] = 1
-            self.logger.info("[openai] forcing temperature=1 for model=%s", self.model_name)
+            self.logger.info(
+                "[openai] forcing temperature=1 for model=%s", self.model_name
+            )
         if temp_value is not None and temp_value != "":
             if supports_custom_temperature:
                 try:
@@ -539,14 +554,19 @@ class Executor:
                 likelihood = _safe_float(item.get("likelihood"), default=-1.0)
                 if not outcome or likelihood < 0:
                     continue
-                normalized.append({"outcome": outcome, "likelihood": max(0.0, min(1.0, likelihood))})
+                normalized.append(
+                    {"outcome": outcome, "likelihood": max(0.0, min(1.0, likelihood))}
+                )
 
         if normalized:
             return normalized
 
         if fill_default and outcomes:
             even_prob = 1.0 / float(len(outcomes))
-            return [{"outcome": str(outcome), "likelihood": even_prob} for outcome in outcomes]
+            return [
+                {"outcome": str(outcome), "likelihood": even_prob}
+                for outcome in outcomes
+            ]
 
         return []
 
@@ -588,7 +608,9 @@ class Executor:
                 fill_default=False,
             )
         if not probabilities:
-            probabilities = self._normalize_probabilities([], outcomes, fill_default=True)
+            probabilities = self._normalize_probabilities(
+                [], outcomes, fill_default=True
+            )
 
         selected_outcome = str(trade_json.get("selected_outcome", "")).strip()
         if not selected_outcome:
@@ -673,7 +695,10 @@ class Executor:
 
     def divide_list(self, original_list, i):
         sublist_size = math.ceil(len(original_list) / i)
-        return [original_list[j : j + sublist_size] for j in range(0, len(original_list), sublist_size)]
+        return [
+            original_list[j : j + sublist_size]
+            for j in range(0, len(original_list), sublist_size)
+        ]
 
     def get_polymarket_llm(self, user_input: str) -> str:
         data1 = self.gamma.get_current_events()
@@ -686,7 +711,9 @@ class Executor:
         if total_tokens <= token_limit:
             return self.process_data_chunk(data1, data2, user_input)
 
-        print(f"total tokens {total_tokens} exceeding llm capacity, now will split and answer")
+        print(
+            f"total tokens {total_tokens} exceeding llm capacity, now will split and answer"
+        )
         group_size = (total_tokens // token_limit) + 1
         useful_keys = [
             "id",
@@ -736,7 +763,9 @@ class Executor:
         market_ids_to_fetch = []
 
         for event_item in filtered_events:
-            event_doc = event_item[0] if isinstance(event_item, (list, tuple)) else event_item
+            event_doc = (
+                event_item[0] if isinstance(event_item, (list, tuple)) else event_item
+            )
             try:
                 data = json.loads(event_doc.json())
             except Exception as err:
@@ -787,10 +816,16 @@ class Executor:
         skipped_quality = 0
         for market_data in fetched_markets:
             try:
-                formatted_market_data = self.polymarket_mapper.map_api_to_market(market_data)
+                formatted_market_data = self.polymarket_mapper.map_api_to_market(
+                    market_data
+                )
             except Exception as err:
                 skipped_parse += 1
-                market_id = market_data.get("id", "unknown") if isinstance(market_data, dict) else "unknown"
+                market_id = (
+                    market_data.get("id", "unknown")
+                    if isinstance(market_data, dict)
+                    else "unknown"
+                )
                 print(f"[markets] skipped market_id={market_id} map_error={err}")
                 continue
 
@@ -809,7 +844,9 @@ class Executor:
 
         return markets
 
-    def _market_depth_snapshot(self, market_payload: Dict[str, Any]) -> Dict[str, float]:
+    def _market_depth_snapshot(
+        self, market_payload: Dict[str, Any]
+    ) -> Dict[str, float]:
         volume_candidates = [
             market_payload.get("volume24hr_clob"),
             market_payload.get("volume24hr"),
@@ -834,7 +871,11 @@ class Executor:
     def _has_tradeable_price_band(self, outcome_prices: List[float]) -> bool:
         for price in outcome_prices:
             numeric_price = _safe_float(price, default=-1.0)
-            if self.trade_min_entry_price <= numeric_price <= self.trade_max_entry_price:
+            if (
+                self.trade_min_entry_price
+                <= numeric_price
+                <= self.trade_max_entry_price
+            ):
                 return True
         return False
 
@@ -845,8 +886,12 @@ class Executor:
         if depth["liquidity"] < self.trade_min_market_liquidity:
             return False
 
-        outcome_prices_raw = self._parse_literal_list(market_payload.get("outcome_prices", "[]"))
-        outcome_prices = [_safe_float(price, default=-1.0) for price in outcome_prices_raw]
+        outcome_prices_raw = self._parse_literal_list(
+            market_payload.get("outcome_prices", "[]")
+        )
+        outcome_prices = [
+            _safe_float(price, default=-1.0) for price in outcome_prices_raw
+        ]
         if not outcome_prices:
             return False
         if not self._has_tradeable_price_band(outcome_prices):
@@ -867,24 +912,38 @@ class Executor:
             if not isinstance(market_obj, (list, tuple)) or len(market_obj) == 0:
                 continue
             market_doc = market_obj[0]
-            rag_score = _safe_float(market_obj[1], default=float("inf")) if len(market_obj) > 1 else float("inf")
+            rag_score = (
+                _safe_float(market_obj[1], default=float("inf"))
+                if len(market_obj) > 1
+                else float("inf")
+            )
 
             metadata = getattr(market_doc, "metadata", {}) or {}
             market_id = str(metadata.get("id") or "")
-            dedupe_key = market_id or str(metadata.get("question") or market_doc.page_content)
+            dedupe_key = market_id or str(
+                metadata.get("question") or market_doc.page_content
+            )
 
             existing = best_by_market_id.get(dedupe_key)
             if existing is None:
                 best_by_market_id[dedupe_key] = market_obj
                 continue
 
-            existing_score = _safe_float(existing[1], default=float("inf")) if len(existing) > 1 else float("inf")
+            existing_score = (
+                _safe_float(existing[1], default=float("inf"))
+                if len(existing) > 1
+                else float("inf")
+            )
             if rag_score < existing_score:
                 best_by_market_id[dedupe_key] = market_obj
 
         deduped = list(best_by_market_id.values())
         deduped.sort(
-            key=lambda item: _safe_float(item[1], default=float("inf")) if len(item) > 1 else float("inf")
+            key=lambda item: (
+                _safe_float(item[1], default=float("inf"))
+                if len(item) > 1
+                else float("inf")
+            )
         )
         return deduped[: self.trade_max_markets_to_score]
 
@@ -900,10 +959,19 @@ class Executor:
         market_id = int(_safe_float(market.get("id"), default=0))
         question = str(market.get("question", ""))
         description = str(market_document.get("page_content", ""))
-        outcomes = [str(item) for item in self._parse_literal_list(market.get("outcomes", "[]"))]
-        outcome_prices_raw = self._parse_literal_list(market.get("outcome_prices", "[]"))
-        token_ids = [str(item) for item in self._parse_literal_list(market.get("clob_token_ids", "[]"))]
-        outcome_prices = [_safe_float(price, default=0.0) for price in outcome_prices_raw]
+        outcomes = [
+            str(item) for item in self._parse_literal_list(market.get("outcomes", "[]"))
+        ]
+        outcome_prices_raw = self._parse_literal_list(
+            market.get("outcome_prices", "[]")
+        )
+        token_ids = [
+            str(item)
+            for item in self._parse_literal_list(market.get("clob_token_ids", "[]"))
+        ]
+        outcome_prices = [
+            _safe_float(price, default=0.0) for price in outcome_prices_raw
+        ]
 
         category_bucket = canonicalize_category(
             explicit_category=str(market.get("category", "")),
@@ -914,11 +982,11 @@ class Executor:
 
         forecasting_description = description
         if supplemental_context:
-            forecasting_description = (
-                f"{description}\n\nRecent news context for this market:\n{supplemental_context}"
-            )
+            forecasting_description = f"{description}\n\nRecent news context for this market:\n{supplemental_context}"
 
-        prompt = self.prompter.superforecaster(question, forecasting_description, outcomes)
+        prompt = self.prompter.superforecaster(
+            question, forecasting_description, outcomes
+        )
         print()
         print("... prompting ... ", prompt)
         print()
@@ -956,7 +1024,9 @@ class Executor:
             outcomes=outcomes,
             outcome_prices=outcome_prices,
             token_ids=token_ids,
-            rag_score=_safe_float(rag_score, default=None) if rag_score is not None else None,
+            rag_score=(
+                _safe_float(rag_score, default=None) if rag_score is not None else None
+            ),
             probabilities=parsed["probabilities"],
             suggested_outcome=parsed["selected_outcome"],
             parsed_side=parsed["parsed_side"],
@@ -989,8 +1059,12 @@ class Executor:
         all_candidates: List[CandidateTrade] = []
         for index, market_obj in enumerate(deduped_markets, start=1):
             try:
-                self.logger.info("[candidates] scoring_market=%s/%s", index, len(deduped_markets))
-                market_doc = market_obj[0] if isinstance(market_obj, (list, tuple)) else None
+                self.logger.info(
+                    "[candidates] scoring_market=%s/%s", index, len(deduped_markets)
+                )
+                market_doc = (
+                    market_obj[0] if isinstance(market_obj, (list, tuple)) else None
+                )
                 metadata = getattr(market_doc, "metadata", {}) or {}
                 market_id = int(_safe_float(metadata.get("id"), default=0))
                 supplemental_context = context_by_market.get(market_id, "")
@@ -1024,10 +1098,15 @@ class Executor:
 
     def _candidate_has_tradeable_entry_price(self, candidate: CandidateTrade) -> bool:
         candidate_price = candidate.parsed_price
-        if candidate_price is None and candidate.suggested_outcome in candidate.outcomes:
+        if (
+            candidate_price is None
+            and candidate.suggested_outcome in candidate.outcomes
+        ):
             idx = candidate.outcomes.index(candidate.suggested_outcome)
             if idx < len(candidate.outcome_prices):
-                candidate_price = _safe_float(candidate.outcome_prices[idx], default=-1.0)
+                candidate_price = _safe_float(
+                    candidate.outcome_prices[idx], default=-1.0
+                )
 
         if candidate_price is None:
             return False
@@ -1035,7 +1114,9 @@ class Executor:
         numeric_price = _safe_float(candidate_price, default=-1.0)
         return self.trade_min_entry_price <= numeric_price <= self.trade_max_entry_price
 
-    def select_trade_candidates(self, candidates: List[CandidateTrade]) -> List[CandidateTrade]:
+    def select_trade_candidates(
+        self, candidates: List[CandidateTrade]
+    ) -> List[CandidateTrade]:
         ranked = sorted(candidates, key=_candidate_score_key)
         if self.trade_diversity_mode == "soft_quota":
             return select_soft_quota_candidates(
@@ -1058,7 +1139,9 @@ class Executor:
             max_per_market_fraction=self.trade_max_per_market_fraction,
         )
 
-    def format_trade_prompt_for_execution(self, best_trade, usdc_balance: float) -> float:
+    def format_trade_prompt_for_execution(
+        self, best_trade, usdc_balance: float
+    ) -> float:
         size = ""
         if isinstance(best_trade, dict):
             parsed_trade = best_trade.get("parsed_trade", {})

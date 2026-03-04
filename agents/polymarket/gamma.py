@@ -25,10 +25,9 @@ class GammaMarketClient:
         self.market_fetch_concurrency = max(
             1, int(os.getenv("GAMMA_MARKET_FETCH_CONCURRENCY", "24"))
         )
-        self.log_market_detail_url = (
-            str(os.getenv("GAMMA_LOG_MARKET_DETAIL_URL", "false")).strip().lower()
-            in ("1", "true", "yes", "on")
-        )
+        self.log_market_detail_url = str(
+            os.getenv("GAMMA_LOG_MARKET_DETAIL_URL", "false")
+        ).strip().lower() in ("1", "true", "yes", "on")
 
         timeout = httpx.Timeout(
             timeout_seconds,
@@ -232,7 +231,9 @@ class GammaMarketClient:
 
         unique_ids = list(dict.fromkeys(ordered_ids))
         worker_limit = (
-            self.market_fetch_concurrency if max_workers is None else max(1, max_workers)
+            self.market_fetch_concurrency
+            if max_workers is None
+            else max(1, max_workers)
         )
         workers = max(1, min(worker_limit, len(unique_ids)))
         fetched_by_id: dict[str, dict[str, Any]] = {}

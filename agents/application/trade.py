@@ -18,33 +18,29 @@ class Trader:
         self.gamma = Gamma()
         self.agent = Agent()
         self.news = News()
-        self.execute_trades = (
-            str(os.getenv("EXECUTE_TRADES", "false")).strip().lower()
-            in ("1", "true", "yes", "on")
+        self.execute_trades = str(
+            os.getenv("EXECUTE_TRADES", "false")
+        ).strip().lower() in ("1", "true", "yes", "on")
+        self.continue_on_execution_error = str(
+            os.getenv("TRADE_CONTINUE_ON_EXECUTION_ERROR", "true")
+        ).strip().lower() in ("1", "true", "yes", "on")
+        self.log_rationale = str(
+            os.getenv("TRADE_LOG_RATIONALE", "true")
+        ).strip().lower() in ("1", "true", "yes", "on")
+        self.news_context_article_cap = max(
+            1, int(os.getenv("TRADE_NEWS_CONTEXT_ARTICLE_CAP", "3"))
         )
-        self.continue_on_execution_error = (
-            str(os.getenv("TRADE_CONTINUE_ON_EXECUTION_ERROR", "true")).strip().lower()
-            in ("1", "true", "yes", "on")
-        )
-        self.log_rationale = (
-            str(os.getenv("TRADE_LOG_RATIONALE", "true")).strip().lower()
-            in ("1", "true", "yes", "on")
-        )
-        self.news_context_article_cap = max(1, int(os.getenv("TRADE_NEWS_CONTEXT_ARTICLE_CAP", "3")))
         self.default_news_limit = max(1, int(os.getenv("TRADE_NEWS_LIMIT", "5")))
         self.default_news_days = max(1, int(os.getenv("TRADE_NEWS_DAYS", "7")))
-        self.default_news_relevance = (
-            str(os.getenv("TRADE_NEWS_RELEVANCE", "true")).strip().lower()
-            in ("1", "true", "yes", "on")
-        )
-        self.default_include_news = (
-            str(os.getenv("TRADE_INCLUDE_NEWS", "false")).strip().lower()
-            in ("1", "true", "yes", "on")
-        )
-        self.default_exclude_sports = (
-            str(os.getenv("TRADE_EXCLUDE_SPORTS", "false")).strip().lower()
-            in ("1", "true", "yes", "on")
-        )
+        self.default_news_relevance = str(
+            os.getenv("TRADE_NEWS_RELEVANCE", "true")
+        ).strip().lower() in ("1", "true", "yes", "on")
+        self.default_include_news = str(
+            os.getenv("TRADE_INCLUDE_NEWS", "false")
+        ).strip().lower() in ("1", "true", "yes", "on")
+        self.default_exclude_sports = str(
+            os.getenv("TRADE_EXCLUDE_SPORTS", "false")
+        ).strip().lower() in ("1", "true", "yes", "on")
         try:
             min_order_amount = float(os.getenv("TRADE_MIN_ORDER_AMOUNT_USDC", "1.0"))
         except (TypeError, ValueError):
@@ -88,7 +84,11 @@ class Trader:
             return "n/a"
         pairs = []
         for idx, outcome in enumerate(candidate.outcomes):
-            price = candidate.outcome_prices[idx] if idx < len(candidate.outcome_prices) else "n/a"
+            price = (
+                candidate.outcome_prices[idx]
+                if idx < len(candidate.outcome_prices)
+                else "n/a"
+            )
             pairs.append(f"{outcome}:{price}")
         return "; ".join(pairs)
 
@@ -107,20 +107,26 @@ class Trader:
         print(border)
         print(
             "| "
-            + " | ".join(headers[idx].ljust(col_widths[idx]) for idx in range(len(headers)))
+            + " | ".join(
+                headers[idx].ljust(col_widths[idx]) for idx in range(len(headers))
+            )
             + " |"
         )
         print(border)
         for row in rows:
             print(
                 "| "
-                + " | ".join(str(row[idx]).ljust(col_widths[idx]) for idx in range(len(headers)))
+                + " | ".join(
+                    str(row[idx]).ljust(col_widths[idx]) for idx in range(len(headers))
+                )
                 + " |"
             )
         print(border)
         print()
 
-    def _print_trade_summary_table(self, candidates: List[CandidateTrade], mode: str) -> None:
+    def _print_trade_summary_table(
+        self, candidates: List[CandidateTrade], mode: str
+    ) -> None:
         if not candidates:
             print("No selected candidates to summarize.")
             return
@@ -150,14 +156,24 @@ class Trader:
                     candidate.category_bucket,
                     self._truncate(candidate.question, 64),
                     candidate.suggested_outcome or "n/a",
-                    self._truncate(self._format_probabilities(candidate.probabilities), 46),
+                    self._truncate(
+                        self._format_probabilities(candidate.probabilities), 46
+                    ),
                     f"{candidate.confidence_gap:.4f}",
                     candidate.parsed_side or "BUY",
-                    f"{candidate.parsed_price:.4f}" if candidate.parsed_price is not None else "n/a",
+                    (
+                        f"{candidate.parsed_price:.4f}"
+                        if candidate.parsed_price is not None
+                        else "n/a"
+                    ),
                     f"{candidate.allocation_fraction:.4f}",
                     f"{candidate.allocation_amount_usdc:.4f}",
                     self._truncate(self._format_book_prices(candidate), 40),
-                    f"{candidate.rag_score:.6f}" if candidate.rag_score is not None else "n/a",
+                    (
+                        f"{candidate.rag_score:.6f}"
+                        if candidate.rag_score is not None
+                        else "n/a"
+                    ),
                     mode,
                     candidate.execution_status,
                 ]
@@ -169,7 +185,9 @@ class Trader:
         if not self.log_rationale:
             return
 
-        print("[rationale] logging concise rationale summaries only; hidden chain-of-thought is unavailable.")
+        print(
+            "[rationale] logging concise rationale summaries only; hidden chain-of-thought is unavailable."
+        )
         for idx, candidate in enumerate(candidates, start=1):
             print(
                 f"[rationale] rank={idx} market_id={candidate.market_id} "
@@ -178,7 +196,11 @@ class Trader:
             print(f"[rationale] summary={candidate.rationale or 'n/a'}")
             print(
                 "[rationale] risk_factors="
-                + (", ".join(candidate.risk_factors) if candidate.risk_factors else "n/a")
+                + (
+                    ", ".join(candidate.risk_factors)
+                    if candidate.risk_factors
+                    else "n/a"
+                )
             )
             print(f"[rationale] counter_case={candidate.counter_case or 'n/a'}")
 
@@ -188,9 +210,15 @@ class Trader:
         selected_candidates: List[CandidateTrade],
     ) -> None:
         all_candidates = candidates_payload.get("all_candidates", [])
-        categories_considered = sorted({candidate.category_bucket for candidate in all_candidates})
-        categories_selected = sorted({candidate.category_bucket for candidate in selected_candidates})
-        planned_allocation = sum(candidate.allocation_amount_usdc for candidate in selected_candidates)
+        categories_considered = sorted(
+            {candidate.category_bucket for candidate in all_candidates}
+        )
+        categories_selected = sorted(
+            {candidate.category_bucket for candidate in selected_candidates}
+        )
+        planned_allocation = sum(
+            candidate.allocation_amount_usdc for candidate in selected_candidates
+        )
 
         print(
             "[run] candidate_summary "
@@ -274,14 +302,18 @@ class Trader:
 
         return selected_candidates
 
-    def _summarize_execution_outcomes(self, candidates: List[CandidateTrade]) -> Dict[str, int]:
+    def _summarize_execution_outcomes(
+        self, candidates: List[CandidateTrade]
+    ) -> Dict[str, int]:
         status_counts: Dict[str, int] = {}
         for candidate in candidates:
             status = candidate.execution_status or "UNKNOWN"
             status_counts[status] = status_counts.get(status, 0) + 1
         return status_counts
 
-    def _extract_min_order_error_details(self, error_text: str) -> Optional[Dict[str, float]]:
+    def _extract_min_order_error_details(
+        self, error_text: str
+    ) -> Optional[Dict[str, float]]:
         match = re.search(
             r"order\s+\(\$([0-9]*\.?[0-9]+)\),\s*min size:\s*\$([0-9]*\.?[0-9]+)",
             str(error_text or ""),
@@ -346,7 +378,9 @@ class Trader:
         parsed_events: List[SimpleEvent] = []
         for raw_event in raw_events or []:
             try:
-                parsed_events.append(SimpleEvent(**self.polymarket.map_api_to_event(raw_event)))
+                parsed_events.append(
+                    SimpleEvent(**self.polymarket.map_api_to_event(raw_event))
+                )
             except Exception as err:
                 print(f"[event] parse_failed slug={slug} error={err}")
 
@@ -389,7 +423,9 @@ class Trader:
         except ValueError:
             return str(article.publishedAt)
 
-    def _normalize_keywords(self, keywords: List[str], max_keywords: int = 8) -> List[str]:
+    def _normalize_keywords(
+        self, keywords: List[str], max_keywords: int = 8
+    ) -> List[str]:
         normalized = []
         seen = set()
         for keyword in keywords:
@@ -413,7 +449,11 @@ class Trader:
         market_doc = market_obj[0] if isinstance(market_obj, (list, tuple)) else None
         metadata = getattr(market_doc, "metadata", {}) or {}
 
-        tags = [tag.strip() for tag in str(metadata.get("tags", "")).split(",") if tag.strip()]
+        tags = [
+            tag.strip()
+            for tag in str(metadata.get("tags", "")).split(",")
+            if tag.strip()
+        ]
         event_title = target_event.title if target_event and target_event.title else ""
         event_slug = target_event.slug if target_event and target_event.slug else ""
         metadata_event_title = str(metadata.get("event_title", "")).strip()
@@ -440,10 +480,14 @@ class Trader:
         lines = []
         for article in articles[:article_cap]:
             title = str(article.title or "Untitled article").strip()
-            source = str(article.source.name if article.source else "Unknown source").strip()
+            source = str(
+                article.source.name if article.source else "Unknown source"
+            ).strip()
             published = self._article_published_date(article)
             description = str(article.description or article.content or "").strip()
-            compact_description = self._truncate(description, max_len=180) if description else ""
+            compact_description = (
+                self._truncate(description, max_len=180) if description else ""
+            )
             url = str(article.url or "").strip()
 
             line = f"- {title} ({source}, {published})"
@@ -467,7 +511,9 @@ class Trader:
         article_cap = max(1, min(self.news_context_article_cap, news_limit))
 
         for market_obj in filtered_markets:
-            market_doc = market_obj[0] if isinstance(market_obj, (list, tuple)) else None
+            market_doc = (
+                market_obj[0] if isinstance(market_obj, (list, tuple)) else None
+            )
             metadata = getattr(market_doc, "metadata", {}) or {}
             market_id_raw = metadata.get("id")
             try:
@@ -507,8 +553,12 @@ class Trader:
         candidates_payload: dict,
         completion_step: int,
     ) -> None:
-        selected_candidates: List[CandidateTrade] = candidates_payload["selected_candidates"]
-        print(f"{completion_step - 1}. SELECTED {len(selected_candidates)} TRADE CANDIDATES")
+        selected_candidates: List[CandidateTrade] = candidates_payload[
+            "selected_candidates"
+        ]
+        print(
+            f"{completion_step - 1}. SELECTED {len(selected_candidates)} TRADE CANDIDATES"
+        )
         if not selected_candidates:
             print("No candidate trades selected. Exiting run.")
             return
@@ -570,7 +620,9 @@ class Trader:
         self._print_trade_summary_table(selected_candidates, mode=mode)
 
         if not self.execute_trades:
-            print(f"{completion_step}. DRY RUN complete (set EXECUTE_TRADES=true to place orders).")
+            print(
+                f"{completion_step}. DRY RUN complete (set EXECUTE_TRADES=true to place orders)."
+            )
             return
 
         if usdc_balance <= 0:
@@ -587,9 +639,8 @@ class Trader:
         self._print_trade_summary_table(selected_candidates, mode="EXECUTED")
         status_counts = self._summarize_execution_outcomes(selected_candidates)
         executed_count = status_counts.get("EXECUTED", 0)
-        failed_count = (
-            status_counts.get("FAILED", 0)
-            + status_counts.get("FAILED_MIN_ORDER_SIZE", 0)
+        failed_count = status_counts.get("FAILED", 0) + status_counts.get(
+            "FAILED_MIN_ORDER_SIZE", 0
         )
         skipped_count = sum(
             count
@@ -677,7 +728,9 @@ class Trader:
                         f"[execution] failed rank={idx} market_id={candidate.market_id} error={error_text}"
                     )
                 if not self.continue_on_execution_error:
-                    print("[execution] aborting_due_to_failure TRADE_CONTINUE_ON_EXECUTION_ERROR=false")
+                    print(
+                        "[execution] aborting_due_to_failure TRADE_CONTINUE_ON_EXECUTION_ERROR=false"
+                    )
                     break
 
     def one_best_trade(
@@ -721,7 +774,9 @@ class Trader:
                 return
 
             resolved_exclude_sports = (
-                self.default_exclude_sports if exclude_sports is None else bool(exclude_sports)
+                self.default_exclude_sports
+                if exclude_sports is None
+                else bool(exclude_sports)
             )
             if resolved_exclude_sports:
                 before_count = len(filtered_markets)
@@ -736,15 +791,21 @@ class Trader:
                     return
 
             resolved_include_news = (
-                self.default_include_news if include_news is None else bool(include_news)
+                self.default_include_news
+                if include_news is None
+                else bool(include_news)
             )
             context_by_market_id = None
             if resolved_include_news:
                 resolved_news_limit = (
-                    self.default_news_limit if news_limit is None else max(1, int(news_limit))
+                    self.default_news_limit
+                    if news_limit is None
+                    else max(1, int(news_limit))
                 )
                 resolved_news_days = (
-                    self.default_news_days if news_days is None else max(1, int(news_days))
+                    self.default_news_days
+                    if news_days is None
+                    else max(1, int(news_days))
                 )
                 resolved_news_relevance = (
                     self.default_news_relevance
@@ -785,10 +846,18 @@ class Trader:
         try:
             self.pre_trade_logic()
 
-            resolved_news_limit = self.default_news_limit if news_limit is None else max(1, int(news_limit))
-            resolved_news_days = self.default_news_days if news_days is None else max(1, int(news_days))
+            resolved_news_limit = (
+                self.default_news_limit
+                if news_limit is None
+                else max(1, int(news_limit))
+            )
+            resolved_news_days = (
+                self.default_news_days if news_days is None else max(1, int(news_days))
+            )
             resolved_news_relevance = (
-                self.default_news_relevance if news_relevance is None else bool(news_relevance)
+                self.default_news_relevance
+                if news_relevance is None
+                else bool(news_relevance)
             )
 
             slug = self._extract_event_slug_from_url(event_url)
@@ -839,7 +908,9 @@ class Trader:
                 return
 
             resolved_exclude_sports = (
-                self.default_exclude_sports if exclude_sports is None else bool(exclude_sports)
+                self.default_exclude_sports
+                if exclude_sports is None
+                else bool(exclude_sports)
             )
             if resolved_exclude_sports:
                 before_count = len(filtered_markets)

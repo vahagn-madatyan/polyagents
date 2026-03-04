@@ -50,7 +50,9 @@ def _candidate(market_id: int, gap: float) -> CandidateTrade:
         ),
     ],
 )
-def test_extract_event_slug_from_url_success(event_url: str, expected_slug: str) -> None:
+def test_extract_event_slug_from_url_success(
+    event_url: str, expected_slug: str
+) -> None:
     trader = _trader_without_init()
     assert trader._extract_event_slug_from_url(event_url) == expected_slug
 
@@ -97,11 +99,15 @@ def test_resolve_event_by_slug_returns_direct_match_even_when_restricted() -> No
                 "featured": bool(event.get("featured")),
                 "restricted": bool(event.get("restricted")),
                 "end": event.get("endDate") or "",
-                "markets": ",".join([str(x.get("id")) for x in event.get("markets", [])]),
+                "markets": ",".join(
+                    [str(x.get("id")) for x in event.get("markets", [])]
+                ),
             }
 
         def get_all_events(self):
-            raise AssertionError("full scan should not be used when direct match exists")
+            raise AssertionError(
+                "full scan should not be used when direct match exists"
+            )
 
     trader = _trader_without_init()
     trader.gamma = GammaStub()
@@ -121,7 +127,9 @@ def test_resolve_event_by_slug_uses_full_scan_fallback() -> None:
 
     class PolyStub:
         def map_api_to_event(self, event):
-            raise AssertionError("map_api_to_event should not be called with empty direct results")
+            raise AssertionError(
+                "map_api_to_event should not be called with empty direct results"
+            )
 
         def get_all_events(self):
             return [
@@ -152,7 +160,9 @@ def test_resolve_event_by_slug_uses_full_scan_fallback() -> None:
     assert event.id == 77
 
 
-def test_build_market_news_keywords_falls_back_to_market_metadata_when_target_event_missing() -> None:
+def test_build_market_news_keywords_falls_back_to_market_metadata_when_target_event_missing() -> (
+    None
+):
     trader = _trader_without_init()
     market_obj = (
         _MarketDocStub(
@@ -265,7 +275,9 @@ def test_apply_minimum_order_constraints_reallocates_after_pruning() -> None:
 
     adjusted = trader._apply_minimum_order_constraints(candidates, usdc_balance=10.0)
 
-    executable = [c for c in adjusted if c.execution_status != "SKIPPED_BELOW_MIN_ORDER"]
+    executable = [
+        c for c in adjusted if c.execution_status != "SKIPPED_BELOW_MIN_ORDER"
+    ]
     skipped = [c for c in adjusted if c.execution_status == "SKIPPED_BELOW_MIN_ORDER"]
 
     assert len(executable) == 3

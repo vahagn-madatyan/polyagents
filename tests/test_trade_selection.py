@@ -36,7 +36,9 @@ class TestTradeSelection(unittest.TestCase):
             canonicalize_category("", "", "Will Ethereum hit 5k?", "crypto market"),
             "crypto",
         )
-        self.assertEqual(canonicalize_category("", "", "Will it rain?", "weather"), "other")
+        self.assertEqual(
+            canonicalize_category("", "", "Will it rain?", "weather"), "other"
+        )
 
     def test_soft_quota_selects_diverse_categories_when_available(self) -> None:
         candidates = [
@@ -47,18 +49,28 @@ class TestTradeSelection(unittest.TestCase):
             _candidate(5, "other", 0.15),
         ]
 
-        selected = select_soft_quota_candidates(candidates, target_count=5, min_categories=3)
+        selected = select_soft_quota_candidates(
+            candidates, target_count=5, min_categories=3
+        )
 
         self.assertEqual(len(selected), 5)
-        self.assertEqual(len({candidate.category_bucket for candidate in selected[:3]}), 3)
+        self.assertEqual(
+            len({candidate.category_bucket for candidate in selected[:3]}), 3
+        )
 
     def test_soft_quota_degrades_gracefully_with_limited_categories(self) -> None:
-        candidates = [_candidate(idx, "crypto", 0.2 - idx * 0.01) for idx in range(1, 5)]
+        candidates = [
+            _candidate(idx, "crypto", 0.2 - idx * 0.01) for idx in range(1, 5)
+        ]
 
-        selected = select_soft_quota_candidates(candidates, target_count=5, min_categories=3)
+        selected = select_soft_quota_candidates(
+            candidates, target_count=5, min_categories=3
+        )
 
         self.assertEqual(len(selected), 4)
-        self.assertEqual({candidate.category_bucket for candidate in selected}, {"crypto"})
+        self.assertEqual(
+            {candidate.category_bucket for candidate in selected}, {"crypto"}
+        )
 
     def test_confidence_weighted_allocator_respects_budget_and_caps(self) -> None:
         candidates = [
@@ -211,7 +223,9 @@ class TestTradeSelection(unittest.TestCase):
         self.assertEqual(mapped_markets[0]["id"], 111)
         self.assertEqual(mapped_markets[1]["id"], 222)
 
-    def test_build_trade_candidates_passes_supplemental_context_by_market_id(self) -> None:
+    def test_build_trade_candidates_passes_supplemental_context_by_market_id(
+        self,
+    ) -> None:
         class DummyLogger:
             def info(self, *args, **kwargs) -> None:
                 return None

@@ -1,4 +1,5 @@
 .venv
+.pre-commit-cache
 .env
 .idea
 .ipynb_checkpoints

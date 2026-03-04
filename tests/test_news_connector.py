@@ -59,8 +59,16 @@ def test_top_headlines_miss_fallback_hits() -> None:
     news, api_mock = _news_with_mocked_api()
     api_mock.get_top_headlines.side_effect = [{"articles": []}, {"articles": []}]
     api_mock.get_everything.side_effect = [
-        {"articles": [_article("https://example.com/one", "One", "2026-02-25T08:00:00Z")]},
-        {"articles": [_article("https://example.com/two", "Two", "2026-02-26T08:00:00Z")]},
+        {
+            "articles": [
+                _article("https://example.com/one", "One", "2026-02-25T08:00:00Z")
+            ]
+        },
+        {
+            "articles": [
+                _article("https://example.com/two", "Two", "2026-02-26T08:00:00Z")
+            ]
+        },
     ]
 
     articles, used_fallback = news.get_articles_for_cli_keywords("iran,bombing")
@@ -94,13 +102,19 @@ def test_deduplicates_by_url_then_title_and_published_at() -> None:
     api_mock.get_everything.side_effect = [
         {
             "articles": [
-                _article("https://example.com/shared", "Shared URL", "2026-02-26T08:00:00Z"),
+                _article(
+                    "https://example.com/shared", "Shared URL", "2026-02-26T08:00:00Z"
+                ),
                 _article_without_url("No URL Same Key", "2026-02-26T09:00:00Z"),
             ]
         },
         {
             "articles": [
-                _article("https://example.com/shared", "Shared URL Duplicate", "2026-02-26T10:00:00Z"),
+                _article(
+                    "https://example.com/shared",
+                    "Shared URL Duplicate",
+                    "2026-02-26T10:00:00Z",
+                ),
                 _article_without_url("No URL Same Key", "2026-02-26T09:00:00Z"),
             ]
         },
@@ -110,7 +124,9 @@ def test_deduplicates_by_url_then_title_and_published_at() -> None:
 
     assert used_fallback is True
     assert len(articles) == 2
-    keys = {article.url or f"{article.title}|{article.publishedAt}" for article in articles}
+    keys = {
+        article.url or f"{article.title}|{article.publishedAt}" for article in articles
+    }
     assert keys == {
         "https://example.com/shared",
         "No URL Same Key|2026-02-26T09:00:00Z",
