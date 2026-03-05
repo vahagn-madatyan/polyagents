@@ -9,12 +9,12 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 
 ### WebSocket Infrastructure
 
-- [ ] **WS-01**: Bot connects to Polymarket sports websocket (`wss://sports-api.polymarket.com/ws`) and maintains persistent connection
+- [x] **WS-01**: Bot connects to Polymarket sports websocket (`wss://sports-api.polymarket.com/ws`) and maintains persistent connection
 - [ ] **WS-02**: Bot automatically reconnects on disconnect with last-known state tracking
 - [ ] **WS-03**: Bot detects silent websocket freeze (no data for configurable threshold) and forces reconnect
-- [ ] **WS-04**: Bot parses and normalizes game state messages (score, period, elapsed, live, ended, status) into structured `SportGameState` objects
-- [ ] **WS-05**: Bot handles sport-specific status values and period formats across all supported sports (NFL, NBA, MLB, NHL, CFB, CBB, soccer, esports, tennis)
-- [ ] **WS-06**: Bot detects period/quarter transitions and triggers trade re-evaluation at each transition
+- [x] **WS-04**: Bot parses and normalizes game state messages (score, period, elapsed, live, ended, status) into structured `SportGameState` objects
+- [x] **WS-05**: Bot handles sport-specific status values and period formats across all supported sports (NFL, NBA, MLB, NHL, CFB, CBB, soccer, esports, tennis)
+- [x] **WS-06**: Bot detects period/quarter transitions and triggers trade re-evaluation at each transition
 - [ ] **WS-07**: Bot handles game edge cases (overtime, rain delays, forfeits, suspensions) with configurable trade rules per edge case
 
 ### Market Discovery
@@ -80,12 +80,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WS-01 | Phase 1 | Pending |
+| WS-01 | Phase 1 | Complete |
 | WS-02 | Phase 1 | Pending |
 | WS-03 | Phase 1 | Pending |
-| WS-04 | Phase 1 | Pending |
-| WS-05 | Phase 1 | Pending |
-| WS-06 | Phase 1 | Pending |
+| WS-04 | Phase 1 | Complete |
+| WS-05 | Phase 1 | Complete |
+| WS-06 | Phase 1 | Complete |
 | WS-07 | Phase 1 | Pending |
 | MKT-01 | Phase 2 | Pending |
 | MKT-02 | Phase 2 | Pending |
