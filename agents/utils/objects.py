@@ -1,4 +1,5 @@
 from __future__ import annotations
+import time
 from typing import Any, Optional, Union
 from pydantic import BaseModel, Field
 
@@ -259,3 +260,38 @@ class CandidateTrade(BaseModel):
     allocation_amount_usdc: float = 0.0
     execution_status: str = "NOT_EXECUTED"
     execution_response: Optional[Any] = None
+
+
+class SportGameState(BaseModel):
+    """Live game state from Polymarket sports WebSocket.
+
+    A single model covers all 9 supported sports (NFL, NBA, MLB, NHL, CFB,
+    CBB, soccer, esports, tennis) with optional sport-specific fields.
+    """
+
+    # Core identity
+    game_id: int
+    league: str  # nfl, nba, mlb, nhl, cfb, cbb, soccer, cs2, tennis, etc.
+    slug: str  # {league}-{team1}-{team2}-{date}
+    home_team: str
+    away_team: str
+
+    # Core state (always present)
+    status: str  # sport-specific status string (InProgress, finished, etc.)
+    score_raw: str  # raw string from WS e.g. "3-16" or "000-000|2-0|Bo3"
+    home_score: Optional[int] = None  # parsed from score_raw
+    away_score: Optional[int] = None  # parsed from score_raw
+    period: str  # "Q4", "1H", "End 5", "2/3", "Set 2", etc.
+    live: bool
+    ended: bool
+
+    # Optional fields
+    elapsed: Optional[str] = None  # time within period, sport-specific
+    finished_timestamp: Optional[str] = None  # ISO 8601 when ended=True
+
+    # Sport-specific extras
+    possession: Optional[str] = None  # NFL/CFB only — maps from WS "turn" field
+
+    # Lifecycle tracking
+    last_updated: float = Field(default_factory=time.monotonic)
+    stale: bool = False  # True when watchdog fires; cleared on next real data message
