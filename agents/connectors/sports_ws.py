@@ -43,6 +43,52 @@ def _env_int(name: str, default: int) -> int:
 # ---------------------------------------------------------------------------
 
 
+def reconnect_delay(attempt: int, base: float = 1.0, max_delay: float = 60.0) -> float:
+    """Compute exponential backoff delay with jitter for reconnect attempts.
+
+    Args:
+        attempt: Zero-based reconnect attempt counter.
+        base: Base delay multiplier in seconds (default 1.0).
+        max_delay: Maximum delay before jitter in seconds (default 60.0).
+
+    Returns:
+        Delay in seconds: min(base * 2^attempt, max_delay) + uniform(0, 25% of that).
+    """
+    exp = min(base * (2**attempt), max_delay)
+    jitter = random.uniform(0, exp * 0.25)
+    return exp + jitter
+
+
+HALT_STATUSES = {
+    "Suspended",
+    "Postponed",
+    "Canceled",
+    "Forfeit",
+    "Delayed",
+    "NotNecessary",
+    "Awarded",
+}
+# Lowercase versions for esports/tennis which use lowercase status values
+_HALT_STATUSES_LOWER = {s.lower() for s in HALT_STATUSES}
+
+
+def should_halt_trading(state: "SportGameState") -> bool:  # noqa: F821
+    """Return True if trading should be halted for this game state.
+
+    Halts on: edge-case statuses (Suspended, Forfeit, Delayed, etc.), stale data.
+    Case-insensitive matching handles esports/tennis lowercase status values.
+
+    Args:
+        state: The current SportGameState to evaluate.
+
+    Returns:
+        True if trading should be halted, False if safe to trade.
+    """
+    if state.stale:
+        return True
+    return state.status in HALT_STATUSES or state.status.lower() in _HALT_STATUSES_LOWER
+
+
 def _parse_score(score_raw: Optional[str]) -> tuple[Optional[int], Optional[int]]:
     """Parse a WS score string into (home_score, away_score) integers.
 
@@ -157,6 +203,9 @@ class SportsWSConnector:
         # Watchdog timer handle
         self._watchdog_timer: threading.Timer | None = None
 
+        # Purge tracking: last time _purge_ended_games() was run
+        self._last_purge_at: float = 0.0
+
         # Config from environment
         self.freeze_timeout = _env_int("SPORTS_WS_FREEZE_TIMEOUT_SECONDS", 300)
         self.ended_game_ttl_minutes = _env_int("SPORTS_WS_ENDED_GAME_TTL_MINUTES", 60)
@@ -222,10 +271,16 @@ class SportsWSConnector:
 
         CRITICAL: _state_lock is released BEFORE calling _message_queue.put()
         to prevent potential deadlock if the queue is full.
+
+        Runs periodic ended game TTL purge (at most once per 60 seconds).
         """
         game_id = data.get("gameId")
         if game_id is None:
             return
+
+        # Periodic purge: run at most once per 60 seconds
+        if time.monotonic() - self._last_purge_at > 60:
+            self._purge_ended_games()
 
         new_period = data.get("period", "")
 
@@ -352,15 +407,38 @@ class SportsWSConnector:
 
     def _schedule_reconnect(self) -> None:
         """Sleep with exponential backoff + jitter before next reconnect attempt."""
-        base = min(2**self._reconnect_attempt, 60)
-        jitter = random.uniform(0, base * 0.25)
-        delay = base + jitter
+        delay = reconnect_delay(self._reconnect_attempt)
         self._reconnect_attempt += 1
         print(
             f"[sports_ws] event=reconnect_scheduled delay={delay:.1f}s "
             f"attempt={self._reconnect_attempt}"
         )
         time.sleep(delay)
+
+    # ------------------------------------------------------------------
+    # Game state lifecycle: ended game TTL purge
+    # ------------------------------------------------------------------
+
+    def _purge_ended_games(self) -> None:
+        """Remove ended game states older than ended_game_ttl_minutes.
+
+        Called periodically (at most once per 60 seconds) from _process_game_state
+        to prevent unbounded memory growth from completed games.
+        """
+        self._last_purge_at = time.monotonic()
+        cutoff = time.monotonic() - (self.ended_game_ttl_minutes * 60)
+        to_remove = []
+        with self._state_lock:
+            for game_id, state in self._game_states.items():
+                if state.ended and state.last_updated < cutoff:
+                    to_remove.append(game_id)
+            for game_id in to_remove:
+                del self._game_states[game_id]
+        if to_remove:
+            print(
+                f"[sports_ws] event=purged_ended_games count={len(to_remove)} "
+                f"game_ids={to_remove}"
+            )
 
     def stop(self) -> None:
         """Stop the reconnect loop and close the WebSocket connection."""
