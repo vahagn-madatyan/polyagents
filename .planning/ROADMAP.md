@@ -12,7 +12,7 @@ The sports mode milestone adds a live, event-driven trading pipeline alongside t
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: WebSocket Foundation** - Reliable `SportGameState` stream from Polymarket sports websocket with reconnect, freeze detection, and normalization across all sports
+- [x] **Phase 1: WebSocket Foundation** - Reliable `SportGameState` stream from Polymarket sports websocket with reconnect, freeze detection, and normalization across all sports (completed 2026-03-05)
 - [ ] **Phase 2: Market Discovery and Pipeline Architecture** - Slug-based sports market identification, external stats/odds API connector, budget coordination, and graceful pipeline coexistence
 - [ ] **Phase 3: Pre-Game Analysis and LLM Integration** - Sports-specific LLM prompts, pre-game trade positioning pipeline, and probability cache for fast-path live decisions
 - [ ] **Phase 4: Live In-Game Trading Engine** - Score-change triggered autonomous execution with debounce, fast-path decisions, and game-ended guards
@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Bot parses game state into structured `SportGameState` objects with correct score, period, elapsed, live, and ended fields for NFL, NBA, MLB, NHL, CFB, CBB, soccer, esports, and tennis events
   4. Bot logs a period/quarter transition event and triggers trade re-evaluation at each detected transition
   5. Bot applies configurable rules for overtime, rain delays, and forfeits — halting new orders rather than trading on suspended/ambiguous markets
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 01-01-PLAN.md — SportGameState model, SportsWSConnector with ping handling, message parsing, period transition detection
@@ -88,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. WebSocket Foundation | 1/2 | In Progress|  |
+| 1. WebSocket Foundation | 2/2 | Complete   | 2026-03-05 |
 | 2. Market Discovery and Pipeline Architecture | 0/3 | Not started | - |
 | 3. Pre-Game Analysis and LLM Integration | 0/2 | Not started | - |
 | 4. Live In-Game Trading Engine | 0/2 | Not started | - |

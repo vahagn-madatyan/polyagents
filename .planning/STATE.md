@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-websocket-foundation-01-PLAN.md
-last_updated: "2026-03-05T05:56:04.327Z"
+stopped_at: Completed 01-websocket-foundation-02-PLAN.md
+last_updated: "2026-03-05T06:03:28.172Z"
 last_activity: 2026-03-03 — Roadmap created; all 24 v1 requirements mapped across 4 phases
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-websocket-foundation P01 | 315 | 2 tasks | 4 files |
+| Phase 01-websocket-foundation P02 | 4 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,9 @@ Recent decisions affecting current work:
 - [Init]: Budget coordination required before any live execution — race condition risk when both pipelines run concurrently
 - [Phase 01-websocket-foundation]: _env_int inlined in sports_ws.py to avoid heavy executor.py import chain (langchain/openai deps)
 - [Phase 01-websocket-foundation]: MagicMock wrapping real lock for thread-safety test — Python 3.14 made _thread.lock.acquire read-only
+- [Phase 01-websocket-foundation]: reconnect_delay() exposed as module-level function for isolated unit testing without connector instantiation
+- [Phase 01-websocket-foundation]: HALT_STATUSES uses both original case and lowercase set for esports/tennis lowercase status strings
+- [Phase 01-websocket-foundation]: _purge_ended_games() called via time-gated check in _process_game_state (not background thread) to avoid additional thread management
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T05:56:04.325Z
-Stopped at: Completed 01-websocket-foundation-01-PLAN.md
+Last session: 2026-03-05T06:03:28.168Z
+Stopped at: Completed 01-websocket-foundation-02-PLAN.md
 Resume file: None
