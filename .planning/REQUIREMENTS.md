@@ -19,8 +19,8 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 
 ### Market Discovery
 
-- [ ] **MKT-01**: Bot identifies sports markets on Polymarket and tags them with metadata (league, teams, game time)
-- [ ] **MKT-02**: Bot maps websocket `gameId`/`slug` to Polymarket market IDs and token addresses via Gamma API slug lookup
+- [x] **MKT-01**: Bot identifies sports markets on Polymarket and tags them with metadata (league, teams, game time)
+- [x] **MKT-02**: Bot maps websocket `gameId`/`slug` to Polymarket market IDs and token addresses via Gamma API slug lookup
 - [x] **MKT-03**: Bot compares external odds against Polymarket price to detect value bets when divergence exceeds configurable threshold
 
 ### Trading Pipeline
@@ -87,8 +87,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WS-05 | Phase 1 | Complete |
 | WS-06 | Phase 1 | Complete |
 | WS-07 | Phase 1 | Complete |
-| MKT-01 | Phase 2 | Pending |
-| MKT-02 | Phase 2 | Pending |
+| MKT-01 | Phase 2 | Complete |
+| MKT-02 | Phase 2 | Complete |
 | MKT-03 | Phase 2 | Complete |
 | TRD-01 | Phase 3 | Pending |
 | TRD-02 | Phase 4 | Pending |
