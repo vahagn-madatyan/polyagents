@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-06T21:42:29.738Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-06T22:40:07.946Z"
 last_activity: 2026-03-03 — Roadmap created; all 24 v1 requirements mapped across 4 phases
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 5
+  completed_plans: 3
   percent: 0
 ---
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 01-websocket-foundation P01 | 315 | 2 tasks | 4 files |
 | Phase 01-websocket-foundation P02 | 4 | 2 tasks | 2 files |
+| Phase 02-market-discovery-and-pipeline-architecture P02 | 15 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Recent decisions affecting current work:
 - [Phase 01-websocket-foundation]: reconnect_delay() exposed as module-level function for isolated unit testing without connector instantiation
 - [Phase 01-websocket-foundation]: HALT_STATUSES uses both original case and lowercase set for esports/tennis lowercase status strings
 - [Phase 01-websocket-foundation]: _purge_ended_games() called via time-gated check in _process_game_state (not background thread) to avoid additional thread management
+- [Phase 02]: H2H stored in _stats_cache (24h TTL) — historical data not time-sensitive like live odds
+- [Phase 02]: get_game_context() returns partial data on source failure — LLM can still trade with available info
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T21:42:29.736Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-market-discovery-and-pipeline-architecture/02-CONTEXT.md
+Last session: 2026-03-06T22:40:07.944Z
+Stopped at: Completed 02-02-PLAN.md
+Resume file: None

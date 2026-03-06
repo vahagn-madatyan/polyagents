@@ -21,7 +21,7 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 
 - [ ] **MKT-01**: Bot identifies sports markets on Polymarket and tags them with metadata (league, teams, game time)
 - [ ] **MKT-02**: Bot maps websocket `gameId`/`slug` to Polymarket market IDs and token addresses via Gamma API slug lookup
-- [ ] **MKT-03**: Bot compares external odds against Polymarket price to detect value bets when divergence exceeds configurable threshold
+- [x] **MKT-03**: Bot compares external odds against Polymarket price to detect value bets when divergence exceeds configurable threshold
 
 ### Trading Pipeline
 
@@ -34,9 +34,9 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 
 ### External Data
 
-- [ ] **DATA-01**: Bot integrates with external sports data API (API-Sports or equivalent) for team stats, season performance, and head-to-head matchup history
-- [ ] **DATA-02**: Bot fetches current season win rates and recent performance for both teams before each game
-- [ ] **DATA-03**: Bot fetches historical head-to-head matchup records between teams
+- [x] **DATA-01**: Bot integrates with external sports data API (API-Sports or equivalent) for team stats, season performance, and head-to-head matchup history
+- [x] **DATA-02**: Bot fetches current season win rates and recent performance for both teams before each game
+- [x] **DATA-03**: Bot fetches historical head-to-head matchup records between teams
 
 ### Pipeline Management
 
@@ -89,16 +89,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WS-07 | Phase 1 | Complete |
 | MKT-01 | Phase 2 | Pending |
 | MKT-02 | Phase 2 | Pending |
-| MKT-03 | Phase 2 | Pending |
+| MKT-03 | Phase 2 | Complete |
 | TRD-01 | Phase 3 | Pending |
 | TRD-02 | Phase 4 | Pending |
 | TRD-03 | Phase 4 | Pending |
 | TRD-04 | Phase 3 | Pending |
 | TRD-05 | Phase 4 | Pending |
 | TRD-06 | Phase 3 | Pending |
-| DATA-01 | Phase 2 | Pending |
-| DATA-02 | Phase 2 | Pending |
-| DATA-03 | Phase 2 | Pending |
+| DATA-01 | Phase 2 | Complete |
+| DATA-02 | Phase 2 | Complete |
+| DATA-03 | Phase 2 | Complete |
 | PIPE-01 | Phase 2 | Pending |
 | PIPE-02 | Phase 2 | Pending |
 | PIPE-03 | Phase 2 | Pending |
