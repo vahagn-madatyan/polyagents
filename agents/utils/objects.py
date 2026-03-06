@@ -295,3 +295,22 @@ class SportGameState(BaseModel):
     # Lifecycle tracking
     last_updated: float = Field(default_factory=time.monotonic)
     stale: bool = False  # True when watchdog fires; cleared on next real data message
+
+
+class SportsMarketTag(BaseModel):
+    """Links a sports WebSocket game slug to a specific Polymarket market.
+
+    Produced by GammaMarketClient slug-lookup methods and consumed by the
+    trading pipeline to place orders on the correct CLOB token pair.
+    """
+
+    slug: str  # ws_slug that sourced this tag, e.g. "nfl-lac-buf-2025-01-26"
+    league: str  # sport league abbreviation, e.g. "nfl", "nba"
+    home_team: str  # home team abbreviation, e.g. "LAC"
+    away_team: str  # away team abbreviation, e.g. "BUF"
+    market_id: str  # Gamma market id (str form of int)
+    condition_id: str  # CLOB condition id (0x hex string)
+    token_id_yes: str  # CLOB token id for YES outcome
+    token_id_no: str  # CLOB token id for NO outcome
+    question: str  # market question text, e.g. "Will the Chargers win?"
+    outcome_prices: Optional[str] = None  # JSON-encoded prices e.g. "0.6,0.4"
