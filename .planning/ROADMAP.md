@@ -40,17 +40,17 @@ Plans:
 **Depends on**: Phase 1
 **Requirements**: MKT-01, MKT-02, MKT-03, DATA-01, DATA-02, DATA-03, PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05
 **Success Criteria** (what must be TRUE):
-  1. Bot builds a `ws_slug → [market_ids]` lookup table at startup via Gamma API and refreshes it every 30 minutes; unmapped game events are logged and skipped without crashing
+  1. Bot builds a `ws_slug -> [market_ids]` lookup table at startup via Gamma API and refreshes it every 30 minutes; unmapped game events are logged and skipped without crashing
   2. Bot fetches current season win rates, recent form, and head-to-head matchup records for both teams before each game via the external stats API
   3. Bot detects when external odds diverge from Polymarket price beyond the configurable threshold and flags those markets as value-bet candidates
   4. Sports pipeline runs as a separate process alongside the general pipeline; a crash in one does not terminate the other
   5. A single `SPORTS_BUDGET_FRACTION` environment variable controls the sports budget share; concurrent pipeline budget reads are protected from race conditions; per-sport caps are configurable
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 02-01: Implement `SportsMarketTag`, slug-based Gamma lookup, and rule-based market filtering
-- [ ] 02-02: Build `SportsDataAPI` REST connector for team stats, H2H records, and external odds
-- [ ] 02-03: Implement `BudgetCoordinator`, `SPORTS_BUDGET_FRACTION` config, per-sport caps, and pipeline isolation
+- [ ] 02-01-PLAN.md — SportsMarketTag model, slug-based Gamma lookup, moneyline market filtering
+- [ ] 02-02-PLAN.md — SportsDataConnector with API-Sports team stats/H2H and The Odds API odds divergence detection
+- [ ] 02-03-PLAN.md — BudgetCoordinator with filelock, per-sport caps, sports pipeline entry point, dry-run mode
 
 ### Phase 3: Pre-Game Analysis and LLM Integration
 **Goal**: The bot runs a complete pre-game analysis pipeline that combines external stats, live odds, and sports-specific LLM prompts to select and place pre-game trades, producing a per-game probability cache that downstream live trading uses as its fast path.
@@ -84,7 +84,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
