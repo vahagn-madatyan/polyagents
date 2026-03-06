@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-06T22:40:39.444Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-03-06T22:47:25.471Z"
 last_activity: 2026-03-03 — Roadmap created; all 24 v1 requirements mapped across 4 phases
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-websocket-foundation P02 | 4 | 2 tasks | 2 files |
 | Phase 02-market-discovery-and-pipeline-architecture P02 | 15 | 1 tasks | 3 files |
 | Phase 02-market-discovery-and-pipeline-architecture P01 | 25 | 1 tasks | 4 files |
+| Phase 02-market-discovery-and-pipeline-architecture P03 | 15 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase 02]: get_game_context() returns partial data on source failure — LLM can still trade with available info
 - [Phase 02-market-discovery-and-pipeline-architecture]: Moneyline filter uses win/winner keyword check on question text — simple and robust across all 9 sport types
 - [Phase 02-market-discovery-and-pipeline-architecture]: build_slug_table returns (slug_table, unmapped) tuple to keep method pure and testable
+- [Phase 02-market-discovery-and-pipeline-architecture]: _env_float/_env_int inlined in budget.py to avoid heavy executor.py import chain
+- [Phase 02-market-discovery-and-pipeline-architecture]: KeyboardInterrupt caught at top-level in sports.py main() so connector.stop() always called
+- [Phase 02-market-discovery-and-pipeline-architecture]: SPORTS_INITIAL_WALLET_USD placeholder in sports pipeline; real CLOB balance fetched in Phase 3
 
 ### Pending Todos
 
@@ -88,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T22:40:39.442Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-03-06T22:47:25.469Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

@@ -40,11 +40,11 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 
 ### Pipeline Management
 
-- [ ] **PIPE-01**: Sports pipeline runs as a separate process alongside general trading pipeline without interference
-- [ ] **PIPE-02**: Bot has configurable budget split between sports and general trading via environment variable
-- [ ] **PIPE-03**: Budget coordinator prevents race conditions when both pipelines attempt to read/allocate USDC balance concurrently
-- [ ] **PIPE-04**: Bot supports configurable per-sport budget caps to limit exposure by sport type
-- [ ] **PIPE-05**: Sports pipeline supports dry-run mode consistent with existing `EXECUTE_TRADES` flag
+- [x] **PIPE-01**: Sports pipeline runs as a separate process alongside general trading pipeline without interference
+- [x] **PIPE-02**: Bot has configurable budget split between sports and general trading via environment variable
+- [x] **PIPE-03**: Budget coordinator prevents race conditions when both pipelines attempt to read/allocate USDC balance concurrently
+- [x] **PIPE-04**: Bot supports configurable per-sport budget caps to limit exposure by sport type
+- [x] **PIPE-05**: Sports pipeline supports dry-run mode consistent with existing `EXECUTE_TRADES` flag
 
 ## v2 Requirements
 
@@ -99,11 +99,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
 | DATA-03 | Phase 2 | Complete |
-| PIPE-01 | Phase 2 | Pending |
-| PIPE-02 | Phase 2 | Pending |
-| PIPE-03 | Phase 2 | Pending |
-| PIPE-04 | Phase 2 | Pending |
-| PIPE-05 | Phase 2 | Pending |
+| PIPE-01 | Phase 2 | Complete |
+| PIPE-02 | Phase 2 | Complete |
+| PIPE-03 | Phase 2 | Complete |
+| PIPE-04 | Phase 2 | Complete |
+| PIPE-05 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 24 total
