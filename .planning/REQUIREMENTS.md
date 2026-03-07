@@ -26,10 +26,10 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 ### Trading Pipeline
 
 - [x] **TRD-01**: Bot runs pre-game analysis pipeline that evaluates sports markets and places trades before game starts
-- [ ] **TRD-02**: Bot executes autonomous in-game trades reacting to live game state changes
-- [ ] **TRD-03**: Bot triggers trade re-evaluation within 5 seconds of a score change event from the websocket
+- [x] **TRD-02**: Bot executes autonomous in-game trades reacting to live game state changes
+- [x] **TRD-03**: Bot triggers trade re-evaluation within 5 seconds of a score change event from the websocket
 - [x] **TRD-04**: Bot uses sports-specific LLM prompts that inject game context (score, period, teams, stats, odds) for trade decisions
-- [ ] **TRD-05**: Bot applies score-change debouncing to prevent LLM call queue overflow during rapid game state changes
+- [x] **TRD-05**: Bot applies score-change debouncing to prevent LLM call queue overflow during rapid game state changes
 - [x] **TRD-06**: Bot uses pre-game LLM probability cache for fast-path live decisions, reserving full LLM calls for major state changes
 
 ### External Data
@@ -91,10 +91,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MKT-02 | Phase 2 | Complete |
 | MKT-03 | Phase 2 | Complete |
 | TRD-01 | Phase 3 | Complete |
-| TRD-02 | Phase 4 | Pending |
-| TRD-03 | Phase 4 | Pending |
+| TRD-02 | Phase 4 | Complete |
+| TRD-03 | Phase 4 | Complete |
 | TRD-04 | Phase 3 | Complete |
-| TRD-05 | Phase 4 | Pending |
+| TRD-05 | Phase 4 | Complete |
 | TRD-06 | Phase 3 | Complete |
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |

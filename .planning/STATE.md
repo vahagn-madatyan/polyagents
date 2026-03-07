@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-07T07:17:21.150Z"
+stopped_at: Completed 04-01-PLAN.md (InGameTrader)
+last_updated: "2026-03-07T07:40:31.897Z"
 last_activity: "2026-03-06 — Completed 03-01: SportsExecutor, sports prompts, PregameCache, SportsAnalysisCache"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
   percent: 60
 ---
 
@@ -57,6 +57,7 @@ Progress: [██████░░░░] 60%
 | Phase 02-market-discovery-and-pipeline-architecture P03 | 15 | 2 tasks | 5 files |
 | Phase 03-pre-game-analysis-and-llm-integration P01 | 5 | 1 tasks | 5 files |
 | Phase 03-pre-game-analysis-and-llm-integration P02 | 361 | 2 tasks | 5 files |
+| Phase 04-live-in-game-trading-engine P01 | 7 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase 03-02]: Cache entry always written before trade gates — Phase 4 can read LLM probabilities even when trade is skipped
 - [Phase 03-02]: in_flight set prevents duplicate concurrent analyses of same game_id across daemon threads
 - [Phase 03-02]: game_states_snapshot refreshed each loop iteration before TTL check — ensures stale cache loop uses current game states
+- [Phase 04-live-in-game-trading-engine]: Fast-path uses fixed INGAME_SIZE_FRACTION (0.05) of max_game_exposure_usd as trade amount — no LLM size recommendation needed for speed
+- [Phase 04-live-in-game-trading-engine]: Slow-path sets cooldown timestamp at thread START (not completion) — prevents overlapping analysis triggers during long LLM calls
+- [Phase 04-live-in-game-trading-engine]: Tied-to-leading classified as major event per spec — tests use home-already-leading scenarios for minor-path testing
 
 ### Pending Todos
 
@@ -101,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T07:17:21.147Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-live-in-game-trading-engine/04-CONTEXT.md
+Last session: 2026-03-07T07:40:31.893Z
+Stopped at: Completed 04-01-PLAN.md (InGameTrader)
+Resume file: None
