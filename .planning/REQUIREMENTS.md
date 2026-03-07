@@ -25,7 +25,7 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 
 ### Trading Pipeline
 
-- [ ] **TRD-01**: Bot runs pre-game analysis pipeline that evaluates sports markets and places trades before game starts
+- [x] **TRD-01**: Bot runs pre-game analysis pipeline that evaluates sports markets and places trades before game starts
 - [ ] **TRD-02**: Bot executes autonomous in-game trades reacting to live game state changes
 - [ ] **TRD-03**: Bot triggers trade re-evaluation within 5 seconds of a score change event from the websocket
 - [x] **TRD-04**: Bot uses sports-specific LLM prompts that inject game context (score, period, teams, stats, odds) for trade decisions
@@ -90,7 +90,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MKT-01 | Phase 2 | Complete |
 | MKT-02 | Phase 2 | Complete |
 | MKT-03 | Phase 2 | Complete |
-| TRD-01 | Phase 3 | Pending |
+| TRD-01 | Phase 3 | Complete |
 | TRD-02 | Phase 4 | Pending |
 | TRD-03 | Phase 4 | Pending |
 | TRD-04 | Phase 3 | Complete |
