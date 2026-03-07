@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: WebSocket Foundation** - Reliable `SportGameState` stream from Polymarket sports websocket with reconnect, freeze detection, and normalization across all sports (completed 2026-03-05)
 - [ ] **Phase 2: Market Discovery and Pipeline Architecture** - Slug-based sports market identification, external stats/odds API connector, budget coordination, and graceful pipeline coexistence
 - [x] **Phase 3: Pre-Game Analysis and LLM Integration** - Sports-specific LLM prompts, pre-game trade positioning pipeline, and probability cache for fast-path live decisions (completed 2026-03-07)
-- [x] **Phase 4: Live In-Game Trading Engine** - Score-change triggered autonomous execution with debounce, fast-path decisions, and game-ended guards (completed 2026-03-07)
+- [ ] **Phase 4: Live In-Game Trading Engine** - Score-change triggered autonomous execution with debounce, fast-path decisions, and game-ended guards
 
 ## Phase Details
 
@@ -75,11 +75,12 @@ Plans:
   2. Bot uses the pre-game probability cache for fast-path decisions on minor score changes without calling the LLM; full LLM calls fire only for configurable major state changes (late score, OT start)
   3. Bot debounces rapid score change events and does not queue multiple simultaneous LLM calls for the same game
   4. Bot halts all new order placement on `ended: true` events and cancels orders placed within the configurable pre-expiry blackout window
-**Plans:** 2/2 plans complete
+**Plans:** 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — InGameTrader core: score-change detection, event classification, fast-path/slow-path routing, cooldown/debounce, game-ended safeguards, exposure tracking (TDD)
-- [ ] 04-02-PLAN.md — Wire InGameTrader into sports.py event loop, env var documentation, integration tests
+- [x] 04-01-PLAN.md — InGameTrader core: score-change detection, event classification, fast-path/slow-path routing, cooldown/debounce, game-ended safeguards, exposure tracking (TDD)
+- [x] 04-02-PLAN.md — Wire InGameTrader into sports.py event loop, env var documentation, integration tests
+- [ ] 04-03-PLAN.md — Fix slug_table key type mismatch: InGameTrader market lookup uses slug string instead of game_id int (gap closure)
 
 ## Progress
 
@@ -91,4 +92,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. WebSocket Foundation | 2/2 | Complete   | 2026-03-05 |
 | 2. Market Discovery and Pipeline Architecture | 0/3 | Not started | - |
 | 3. Pre-Game Analysis and LLM Integration | 2/2 | Complete   | 2026-03-07 |
-| 4. Live In-Game Trading Engine | 2/2 | Complete   | 2026-03-07 |
+| 4. Live In-Game Trading Engine | 2/3 | Gap closure | - |
