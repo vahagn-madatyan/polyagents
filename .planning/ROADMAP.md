@@ -60,11 +60,11 @@ Plans:
   1. Bot generates pre-game trade candidates using LLM prompts that include score context, period, team names, season win rates, H2H records, and external odds — not generic market analysis text
   2. Bot places pre-game trades (or logs dry-run orders) before a game starts, drawing from the sports budget allocation and using confidence-weighted sizing
   3. Bot stores a per-game LLM probability estimate in a cache after pre-game analysis; the cache entry is retrievable by game ID for use during live trading
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 03-01: Build `SportsExecutor` with sports-specific prompt templates and `llm.ainvoke()` async integration
-- [ ] 03-02: Implement pre-game trade positioning pipeline, probability cache, and `SportsTrader` orchestrator (pre-game branch)
+- [ ] 03-01-PLAN.md — SportsExecutor with sports-specific prompt templates, PregameCache (file-persisted JSON with TTL), and SportsAnalysisCache model
+- [ ] 03-02-PLAN.md — SportsTrader orchestrator with confidence/budget gating, dry-run/live trade execution, and sports.py event loop wiring
 
 ### Phase 4: Live In-Game Trading Engine
 **Goal**: The bot autonomously executes in-game trades triggered by score changes, using cached pre-game probabilities for fast-path decisions and reserving full LLM calls for major state changes, while guarding against trading resolved markets and rate-limit exhaustion.
