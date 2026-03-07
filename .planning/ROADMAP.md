@@ -75,11 +75,11 @@ Plans:
   2. Bot uses the pre-game probability cache for fast-path decisions on minor score changes without calling the LLM; full LLM calls fire only for configurable major state changes (late score, OT start)
   3. Bot debounces rapid score change events and does not queue multiple simultaneous LLM calls for the same game
   4. Bot halts all new order placement on `ended: true` events and cancels orders placed within the configurable pre-expiry blackout window
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 04-01: Implement score-change event handler with debounce, cooldown, and fast-path/slow-path decision routing
-- [ ] 04-02: Add game-ended guard, pre-expiry order cancellation, concurrent game handling, and full end-to-end dry-run validation
+- [ ] 04-01-PLAN.md — InGameTrader core: score-change detection, event classification, fast-path/slow-path routing, cooldown/debounce, game-ended safeguards, exposure tracking (TDD)
+- [ ] 04-02-PLAN.md — Wire InGameTrader into sports.py event loop, env var documentation, integration tests
 
 ## Progress
 
