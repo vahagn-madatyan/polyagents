@@ -4,6 +4,7 @@ All external dependencies are mocked to prevent actual WS connections or API cal
 """
 
 import os
+import queue
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -60,6 +61,7 @@ def _make_gamma_mock():
 
 class TestMainInitialization:
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -76,6 +78,7 @@ class TestMainInitialization:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
     ):
@@ -98,6 +101,7 @@ class TestMainInitialization:
         MockData.assert_called_once()
 
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -114,6 +118,7 @@ class TestMainInitialization:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
     ):
@@ -136,6 +141,7 @@ class TestMainInitialization:
         gamma_mock.build_slug_table.assert_called_once()
 
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -152,6 +158,7 @@ class TestMainInitialization:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
         capsys,
@@ -188,6 +195,7 @@ class TestMainInitialization:
         assert "dry_run=False" in captured.out
 
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -204,6 +212,7 @@ class TestMainInitialization:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
         capsys,
@@ -225,6 +234,7 @@ class TestMainInitialization:
         assert "dry_run=True" in captured.out
 
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -241,6 +251,7 @@ class TestMainInitialization:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
         capsys,
@@ -265,6 +276,7 @@ class TestMainInitialization:
 
 class TestMainIdle:
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -281,6 +293,7 @@ class TestMainIdle:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
     ):
@@ -300,6 +313,7 @@ class TestMainIdle:
 
 class TestCleanShutdown:
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -316,6 +330,7 @@ class TestCleanShutdown:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
     ):
@@ -358,6 +373,7 @@ class TestPreGameWiring:
     """Tests for Phase 3 SportsTrader integration into the event loop."""
 
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -374,6 +390,7 @@ class TestPreGameWiring:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
     ):
@@ -394,6 +411,7 @@ class TestPreGameWiring:
 
     @patch("agents.sports.threading.Thread")
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -410,6 +428,7 @@ class TestPreGameWiring:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         MockThread,
         monkeypatch,
@@ -485,6 +504,7 @@ class TestPreGameWiring:
         assert len(pregame_threads) >= 1
 
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -501,6 +521,7 @@ class TestPreGameWiring:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
         capsys,
@@ -523,6 +544,7 @@ class TestPreGameWiring:
         assert "balance=2500.00" in captured.out
 
     @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
     @patch("agents.sports.SportsTrader")
     @patch("agents.sports.PregameCache")
     @patch("agents.sports.SportsExecutor")
@@ -539,6 +561,7 @@ class TestPreGameWiring:
         MockExecutor,
         MockCache,
         MockTrader,
+        MockInGameTrader,
         mock_sleep,
         monkeypatch,
         capsys,
@@ -575,3 +598,192 @@ class TestPreGameWiring:
         mock_poly_instance.get_usdc_balance.assert_called_once()
         captured = capsys.readouterr()
         assert "source=clob" in captured.out
+
+
+class TestInGameTraderWiring:
+    """Phase 4 integration tests: verify InGameTrader is wired into sports.py main()."""
+
+    @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
+    @patch("agents.sports.SportsTrader")
+    @patch("agents.sports.PregameCache")
+    @patch("agents.sports.SportsExecutor")
+    @patch("agents.sports.SportsDataConnector")
+    @patch("agents.sports.GammaMarketClient")
+    @patch("agents.sports.SportsWSConnector")
+    @patch("agents.sports.BudgetCoordinator")
+    def test_ingame_trader_instantiated_with_shared_deps(
+        self,
+        MockBudget,
+        MockWS,
+        MockGamma,
+        MockData,
+        MockExecutor,
+        MockCache,
+        MockTrader,
+        MockInGameTrader,
+        mock_sleep,
+        monkeypatch,
+    ):
+        """InGameTrader is constructed with the same shared dependencies as SportsTrader."""
+        monkeypatch.setenv("EXECUTE_TRADES", "false")
+        monkeypatch.delenv("SPORTS_EXECUTE_TRADES", raising=False)
+        monkeypatch.setenv("SPORTS_INITIAL_WALLET_USD", "1000.0")
+
+        ws_mock = _make_ws_mock()
+        ws_mock.get_all_game_states.return_value = {1: MagicMock()}
+        MockWS.return_value = ws_mock
+        MockGamma.return_value = _make_gamma_mock()
+
+        budget_instance = MagicMock()
+        MockBudget.return_value = budget_instance
+
+        data_instance = MagicMock()
+        MockData.return_value = data_instance
+
+        executor_instance = MagicMock()
+        MockExecutor.return_value = executor_instance
+
+        cache_instance = MagicMock()
+        MockCache.return_value = cache_instance
+
+        import agents.sports as sports_mod
+
+        try:
+            sports_mod.main()
+        except KeyboardInterrupt:
+            pass
+
+        # InGameTrader must have been constructed
+        MockInGameTrader.assert_called_once()
+        call_kwargs = MockInGameTrader.call_args[1]
+
+        # Verify shared dependency injection
+        assert call_kwargs["budget_coordinator"] is budget_instance
+        assert call_kwargs["data_connector"] is data_instance
+        assert call_kwargs["executor"] is executor_instance
+        assert call_kwargs["cache"] is cache_instance
+        assert call_kwargs["dry_run"] is True  # EXECUTE_TRADES=false => dry_run=True
+        assert call_kwargs["polymarket"] is None  # dry-run has no polymarket
+
+    @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
+    @patch("agents.sports.SportsTrader")
+    @patch("agents.sports.PregameCache")
+    @patch("agents.sports.SportsExecutor")
+    @patch("agents.sports.SportsDataConnector")
+    @patch("agents.sports.GammaMarketClient")
+    @patch("agents.sports.SportsWSConnector")
+    @patch("agents.sports.BudgetCoordinator")
+    def test_ingame_trader_tick_called_in_loop(
+        self,
+        MockBudget,
+        MockWS,
+        MockGamma,
+        MockData,
+        MockExecutor,
+        MockCache,
+        MockTrader,
+        MockInGameTrader,
+        mock_sleep,
+        monkeypatch,
+    ):
+        """ingame_trader.tick() is called in the main event loop with game_states_snapshot and slug_table."""
+        monkeypatch.setenv("EXECUTE_TRADES", "false")
+        monkeypatch.delenv("SPORTS_EXECUTE_TRADES", raising=False)
+        monkeypatch.setenv("SPORTS_INITIAL_WALLET_USD", "1000.0")
+
+        game_state_snapshot = {42: MagicMock()}
+        ws_mock = _make_ws_mock()
+        ws_mock.get_all_game_states.return_value = game_state_snapshot
+        MockWS.return_value = ws_mock
+
+        slug_table = {"nba-lal-bos": MagicMock()}
+        gamma_mock = _make_gamma_mock()
+        gamma_mock.build_slug_table.return_value = (slug_table, [])
+        MockGamma.return_value = gamma_mock
+
+        ingame_instance = MagicMock()
+        MockInGameTrader.return_value = ingame_instance
+
+        import agents.sports as sports_mod
+
+        try:
+            sports_mod.main()
+        except KeyboardInterrupt:
+            pass
+
+        # tick() must have been called at least once in the loop
+        assert ingame_instance.tick.called, "ingame_trader.tick() was not called"
+        # Verify it was called with the game_states_snapshot and slug_table
+        call_args = ingame_instance.tick.call_args
+        assert call_args[0][0] == game_state_snapshot
+        assert call_args[0][1] == slug_table
+
+    @patch("agents.sports.time.sleep", side_effect=KeyboardInterrupt)
+    @patch("agents.sports.InGameTrader")
+    @patch("agents.sports.SportsTrader")
+    @patch("agents.sports.PregameCache")
+    @patch("agents.sports.SportsExecutor")
+    @patch("agents.sports.SportsDataConnector")
+    @patch("agents.sports.GammaMarketClient")
+    @patch("agents.sports.SportsWSConnector")
+    @patch("agents.sports.BudgetCoordinator")
+    def test_period_transition_routed_to_ingame_trader(
+        self,
+        MockBudget,
+        MockWS,
+        MockGamma,
+        MockData,
+        MockExecutor,
+        MockCache,
+        MockTrader,
+        MockInGameTrader,
+        mock_sleep,
+        monkeypatch,
+    ):
+        """period_transition messages from the queue are routed to ingame_trader.handle_period_transition()."""
+        monkeypatch.setenv("EXECUTE_TRADES", "false")
+        monkeypatch.delenv("SPORTS_EXECUTE_TRADES", raising=False)
+        monkeypatch.setenv("SPORTS_INITIAL_WALLET_USD", "1000.0")
+
+        # Build a real queue with one period_transition message
+        msg = {
+            "type": "period_transition",
+            "game_id": 77,
+            "state": {"score": "3-0"},
+            "old_period": "Q1",
+            "new_period": "Q2",
+        }
+        real_queue = queue.Queue()
+        real_queue.put(msg)
+
+        ws_mock = _make_ws_mock()
+        # Return a non-empty game state so the wait loop exits without sleeping,
+        # ensuring the main event loop runs at least one iteration to drain the queue.
+        ws_mock.get_all_game_states.return_value = {77: MagicMock()}
+        ws_mock.get_message_queue.return_value = real_queue
+        MockWS.return_value = ws_mock
+
+        slug_table = {"nba-lal-bos": MagicMock()}
+        gamma_mock = _make_gamma_mock()
+        gamma_mock.build_slug_table.return_value = (slug_table, [])
+        MockGamma.return_value = gamma_mock
+
+        ingame_instance = MagicMock()
+        MockInGameTrader.return_value = ingame_instance
+
+        import agents.sports as sports_mod
+
+        try:
+            sports_mod.main()
+        except KeyboardInterrupt:
+            pass
+
+        # handle_period_transition() must have been called with the msg and slug_table
+        assert (
+            ingame_instance.handle_period_transition.called
+        ), "ingame_trader.handle_period_transition() was not called"
+        call_args = ingame_instance.handle_period_transition.call_args
+        assert call_args[0][0] == msg
+        assert call_args[0][1] == slug_table
