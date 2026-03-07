@@ -314,3 +314,31 @@ class SportsMarketTag(BaseModel):
     token_id_no: str  # CLOB token id for NO outcome
     question: str  # market question text, e.g. "Will the Chargers win?"
     outcome_prices: Optional[str] = None  # JSON-encoded prices e.g. "0.6,0.4"
+
+
+class SportsAnalysisCache(BaseModel):
+    """Persisted pre-game analysis entry produced by SportsExecutor.
+
+    Stored in PregameCache keyed by game_id for fast-path reuse during Phase 4.
+    """
+
+    game_id: int
+    league: str
+    home_team: str
+    away_team: str
+    timestamp: float
+    llm_home_win_prob: float
+    llm_away_win_prob: float
+    confidence_gap: float
+    selected_outcome: str
+    selected_side: str
+    size_fraction: float
+    rationale: str
+    risk_factors: list[str] = Field(default_factory=list)
+    counter_case: str = ""
+    polymarket_price_at_analysis: float
+    external_implied_prob: Optional[float] = None
+    trade_attempted: bool = False
+    trade_error: Optional[str] = None
+    superforecast_response: str = ""
+    trade_response: str = ""
