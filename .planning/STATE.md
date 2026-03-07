@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01-PLAN.md (InGameTrader)
-last_updated: "2026-03-07T07:40:31.897Z"
+stopped_at: Completed 04-02-PLAN.md (InGameTrader wiring)
+last_updated: "2026-03-07T07:47:00.631Z"
 last_activity: "2026-03-06 — Completed 03-01: SportsExecutor, sports prompts, PregameCache, SportsAnalysisCache"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 60
 ---
 
@@ -58,6 +58,7 @@ Progress: [██████░░░░] 60%
 | Phase 03-pre-game-analysis-and-llm-integration P01 | 5 | 1 tasks | 5 files |
 | Phase 03-pre-game-analysis-and-llm-integration P02 | 361 | 2 tasks | 5 files |
 | Phase 04-live-in-game-trading-engine P01 | 7 | 1 tasks | 2 files |
+| Phase 04-live-in-game-trading-engine P02 | 4 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,9 @@ Recent decisions affecting current work:
 - [Phase 04-live-in-game-trading-engine]: Fast-path uses fixed INGAME_SIZE_FRACTION (0.05) of max_game_exposure_usd as trade amount — no LLM size recommendation needed for speed
 - [Phase 04-live-in-game-trading-engine]: Slow-path sets cooldown timestamp at thread START (not completion) — prevents overlapping analysis triggers during long LLM calls
 - [Phase 04-live-in-game-trading-engine]: Tied-to-leading classified as major event per spec — tests use home-already-leading scenarios for minor-path testing
+- [Phase Phase 04-live-in-game-trading-engine]: InGameTrader instantiated with same 6 shared deps as SportsTrader — no new object graph, plug-in compatible
+- [Phase Phase 04-live-in-game-trading-engine]: Queue drain replaced with while-True drain-all loop — ensures all messages processed per iteration, not just one
+- [Phase Phase 04-live-in-game-trading-engine]: ingame_trader.tick() placed before SportsTrader TTL loop — score changes detected before cache refresh; tick() is non-blocking
 
 ### Pending Todos
 
@@ -105,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T07:40:31.893Z
-Stopped at: Completed 04-01-PLAN.md (InGameTrader)
+Last session: 2026-03-07T07:47:00.628Z
+Stopped at: Completed 04-02-PLAN.md (InGameTrader wiring)
 Resume file: None
