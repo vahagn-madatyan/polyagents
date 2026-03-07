@@ -185,23 +185,23 @@ class TestScoreChangeDetection:
         assert trader._prev_game_states[1].score_raw == "0-0"
 
     def test_score_change_detected(self, monkeypatch):
-        """tick() with changed score_raw triggers event processing."""
+        """tick() with changed score_raw triggers event processing (fast-path for minor event)."""
         monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
         monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
         trader, mocks = _make_trader()
         tag = _market_tag(game_id=1)
         slug_table = {1: tag}
 
-        # Establish baseline
+        # Establish baseline: home already leading 5-3
         trader._prev_game_states[1] = _game_state(
-            game_id=1, score_raw="0-0", home_score=0, away_score=0
+            game_id=1, score_raw="5-3", home_score=5, away_score=3
         )
 
-        # Now score changes
-        gs_new = _game_state(game_id=1, score_raw="3-0", home_score=3, away_score=0)
+        # Minor score change: home team adds 3 more points (still leading, no lead change)
+        gs_new = _game_state(game_id=1, score_raw="8-3", home_score=8, away_score=3)
         trader.tick({1: gs_new}, slug_table)
 
-        # Fast-path should have fetched the price (minor event: home team still leading = 3-0, no lead change from 0-0 as both were 0)
+        # Fast-path should have been triggered: cache.get() called for live divergence check
         mocks["cache"].get.assert_called()
 
     def test_no_score_change_no_processing(self, monkeypatch):
@@ -634,15 +634,16 @@ class TestCooldown:
         # Set cooldown timestamp far in the past
         trader._last_processed[1] = time.time() - 999
 
+        # Use a minor event (home already leading, just scores more)
         trader._prev_game_states[1] = _game_state(
-            game_id=1, score_raw="0-0", home_score=0, away_score=0
+            game_id=1, score_raw="5-3", home_score=5, away_score=3
         )
         trader.tick(
-            {1: _game_state(game_id=1, score_raw="3-0", home_score=3, away_score=0)},
+            {1: _game_state(game_id=1, score_raw="8-3", home_score=8, away_score=3)},
             slug_table,
         )
 
-        # Should have processed (cache.get called)
+        # Should have processed (fast-path => cache.get called)
         mocks["cache"].get.assert_called()
 
     def test_fast_path_also_sets_cooldown(self, monkeypatch):
@@ -671,21 +672,22 @@ class TestCooldown:
         # Game 1 is in cooldown
         trader._last_processed[1] = time.time()  # just processed
 
-        # Both games have baseline
+        # Both games have baseline — game 2 uses a minor-event scenario (home already leading)
         trader._prev_game_states[1] = _game_state(
-            game_id=1, score_raw="0-0", home_score=0, away_score=0
+            game_id=1, score_raw="3-0", home_score=3, away_score=0
         )
         trader._prev_game_states[2] = _game_state(
-            game_id=2, score_raw="0-0", home_score=0, away_score=0
+            game_id=2, score_raw="5-3", home_score=5, away_score=3
         )
 
         current = {
-            1: _game_state(game_id=1, score_raw="3-0", home_score=3, away_score=0),
-            2: _game_state(game_id=2, score_raw="5-0", home_score=5, away_score=0),
+            1: _game_state(game_id=1, score_raw="6-0", home_score=6, away_score=0),
+            # Game 2: minor event — home still leading, just adds more
+            2: _game_state(game_id=2, score_raw="8-3", home_score=8, away_score=3),
         }
         trader.tick(current, slug_table)
 
-        # Game 2 should be processed (cache.get called for game_id=2)
+        # Game 2 should be processed via fast-path (cache.get called for game_id=2)
         calls = [c for c in mocks["cache"].get.call_args_list if c.args[0] == 2]
         assert len(calls) >= 1
 
