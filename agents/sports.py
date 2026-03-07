@@ -3,7 +3,7 @@ Sports pipeline entry point.
 
 Run as: python -m agents.sports
 
-This module wires together all Phase 2 and Phase 3 components:
+This module wires together all Phase 2, Phase 3, and Phase 4 components:
   - SportsWSConnector: live game state via WebSocket
   - GammaMarketClient: slug-to-market lookup table
   - SportsDataConnector: historical stats and live odds
@@ -11,6 +11,7 @@ This module wires together all Phase 2 and Phase 3 components:
   - SportsExecutor: two-stage LLM analysis engine
   - PregameCache: file-persisted analysis result cache
   - SportsTrader: orchestrates pre-game analysis and trade execution
+  - InGameTrader: autonomous in-game score-change trading engine (Phase 4)
 """
 
 import os
@@ -19,6 +20,7 @@ import threading
 import time
 
 from agents.application.budget import BudgetCoordinator
+from agents.application.ingame_trader import InGameTrader
 from agents.application.pregame_cache import PregameCache
 from agents.application.sports_executor import SportsExecutor
 from agents.application.sports_trader import SportsTrader
@@ -87,10 +89,11 @@ def main() -> None:
     """
     Main entry point for the sports pipeline.
 
-    Initializes all Phase 2 and Phase 3 components and enters the main event loop.
+    Initializes all Phase 2, Phase 3, and Phase 4 components and enters the main event loop.
     Triggers pre-game analysis at two points:
       1. After initial slug table build (newly mapped games)
       2. On each loop iteration for cache-expired games (TTL refresh)
+    In-game trading (Phase 4) runs each loop iteration via ingame_trader.tick().
     """
     dry_run = _resolve_dry_run()
     print(f"[sports_pipeline] event=startup dry_run={dry_run}")
@@ -135,6 +138,16 @@ def main() -> None:
 
     # Phase 3: SportsTrader orchestrates pre-game analysis and trade execution
     trader = SportsTrader(
+        budget_coordinator=budget_coordinator,
+        data_connector=data_connector,
+        executor=executor,
+        cache=pregame_cache,
+        dry_run=dry_run,
+        polymarket=polymarket,
+    )
+
+    # Phase 4: InGameTrader runs alongside SportsTrader with shared dependencies
+    ingame_trader = InGameTrader(
         budget_coordinator=budget_coordinator,
         data_connector=data_connector,
         executor=executor,
@@ -192,12 +205,15 @@ def main() -> None:
         # Main event loop
         msg_queue = connector.get_message_queue()
         while True:
-            # Process any queued game state change messages
-            try:
-                msg = msg_queue.get_nowait()
-                print(f"[sports_pipeline] event=game_state_change data={msg}")
-            except Exception:
-                pass  # queue empty — normal
+            # Drain all queued game state change messages; route period transitions
+            while True:
+                try:
+                    msg = msg_queue.get_nowait()
+                    print(f"[sports_pipeline] event=game_state_change data={msg}")
+                    if msg.get("type") == "period_transition":
+                        ingame_trader.handle_period_transition(msg, slug_table)
+                except Exception:
+                    break  # queue empty
 
             # Periodic slug table refresh
             now = time.time()
@@ -212,6 +228,10 @@ def main() -> None:
 
             # Trigger point 2: Re-analyze games with stale/expired cache entries
             game_states_snapshot = connector.get_all_game_states()
+
+            # Phase 4: In-game trading — detect score changes and trade on events
+            ingame_trader.tick(game_states_snapshot, slug_table)
+
             for slug, market_tags in slug_table.items():
                 game_state = next(
                     (gs for gs in game_states_snapshot.values() if gs.slug == slug),
