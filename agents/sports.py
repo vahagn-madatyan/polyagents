@@ -3,14 +3,14 @@ Sports pipeline entry point.
 
 Run as: python -m agents.sports
 
-This module wires together all Phase 2 components:
+This module wires together all Phase 2 and Phase 3 components:
   - SportsWSConnector: live game state via WebSocket
   - GammaMarketClient: slug-to-market lookup table
   - SportsDataConnector: historical stats and live odds
   - BudgetCoordinator: cross-process budget management
-
-Actual trade execution logic is Phase 3+; this module provides the
-architectural backbone and event loop that Phase 3 builds on top of.
+  - SportsExecutor: two-stage LLM analysis engine
+  - PregameCache: file-persisted analysis result cache
+  - SportsTrader: orchestrates pre-game analysis and trade execution
 """
 
 import os
@@ -19,6 +19,9 @@ import threading
 import time
 
 from agents.application.budget import BudgetCoordinator
+from agents.application.pregame_cache import PregameCache
+from agents.application.sports_executor import SportsExecutor
+from agents.application.sports_trader import SportsTrader
 from agents.connectors.sports_data import SportsDataConnector
 from agents.connectors.sports_ws import SportsWSConnector
 from agents.polymarket.gamma import GammaMarketClient
@@ -84,14 +87,32 @@ def main() -> None:
     """
     Main entry point for the sports pipeline.
 
-    Initializes all Phase 2 components and enters the main event loop.
-    Trade execution logic will be wired in Phase 3.
+    Initializes all Phase 2 and Phase 3 components and enters the main event loop.
+    Triggers pre-game analysis at two points:
+      1. After initial slug table build (newly mapped games)
+      2. On each loop iteration for cache-expired games (TTL refresh)
     """
     dry_run = _resolve_dry_run()
     print(f"[sports_pipeline] event=startup dry_run={dry_run}")
 
+    # Wallet balance: real CLOB balance in live mode; env fallback in dry-run
+    if not dry_run:
+        # Lazy import to avoid heavy dep chain in tests / dry-run mode
+        from agents.polymarket.polymarket import Polymarket
+
+        polymarket = Polymarket(initialize_clob_client=True)
+        wallet_balance = polymarket.get_usdc_balance()
+    else:
+        polymarket = None
+        wallet_balance = _env_float("SPORTS_INITIAL_WALLET_USD", 1000.0)
+
+    print(
+        f"[sports_pipeline] event=wallet_balance "
+        f"source={'clob' if not dry_run else 'env'} "
+        f"balance={wallet_balance:.2f}"
+    )
+
     # Budget coordination
-    wallet_balance = _env_float("SPORTS_INITIAL_WALLET_USD", 1000.0)
     budget_coordinator = BudgetCoordinator(wallet_balance=wallet_balance)
     budget_coordinator.allocate_budget()
     sports_alloc = budget_coordinator.sports_budget
@@ -107,6 +128,20 @@ def main() -> None:
 
     # Historical data and live odds
     data_connector = SportsDataConnector()
+
+    # Phase 3: LLM analysis engine and cache
+    executor = SportsExecutor()
+    pregame_cache = PregameCache()
+
+    # Phase 3: SportsTrader orchestrates pre-game analysis and trade execution
+    trader = SportsTrader(
+        budget_coordinator=budget_coordinator,
+        data_connector=data_connector,
+        executor=executor,
+        cache=pregame_cache,
+        dry_run=dry_run,
+        polymarket=polymarket,
+    )
 
     # Live game state via WebSocket
     connector = SportsWSConnector()
@@ -133,9 +168,28 @@ def main() -> None:
             f"mapped={len(slug_table)} unmapped={len(unmapped)}"
         )
 
+        # Trigger point 1: Pre-game analysis for newly mapped games on slug table build
+        for slug, market_tags in slug_table.items():
+            game_state = next(
+                (gs for gs in game_states.values() if gs.slug == slug),
+                None,
+            )
+            if (
+                game_state
+                and not game_state.ended
+                and trader.should_analyze(game_state.game_id)
+            ):
+                tag = market_tags[0] if isinstance(market_tags, list) else market_tags
+                threading.Thread(
+                    target=trader.run_pregame_analysis,
+                    args=(game_state.game_id, game_state, tag, wallet_balance),
+                    daemon=True,
+                    name=f"pregame-{game_state.game_id}",
+                ).start()
+
         last_slug_refresh = time.time()
 
-        # Main event loop — trade logic is Phase 3+
+        # Main event loop
         msg_queue = connector.get_message_queue()
         while True:
             # Process any queued game state change messages
@@ -155,6 +209,28 @@ def main() -> None:
                     f"mapped={len(slug_table)} unmapped={len(unmapped)}"
                 )
                 last_slug_refresh = now
+
+            # Trigger point 2: Re-analyze games with stale/expired cache entries
+            game_states_snapshot = connector.get_all_game_states()
+            for slug, market_tags in slug_table.items():
+                game_state = next(
+                    (gs for gs in game_states_snapshot.values() if gs.slug == slug),
+                    None,
+                )
+                if (
+                    game_state
+                    and not game_state.ended
+                    and trader.should_analyze(game_state.game_id)
+                ):
+                    tag = (
+                        market_tags[0] if isinstance(market_tags, list) else market_tags
+                    )
+                    threading.Thread(
+                        target=trader.run_pregame_analysis,
+                        args=(game_state.game_id, game_state, tag, wallet_balance),
+                        daemon=True,
+                        name=f"pregame-{game_state.game_id}",
+                    ).start()
 
             time.sleep(1)
 
