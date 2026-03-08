@@ -135,7 +135,7 @@ class InGameTrader:
     def tick(
         self,
         current_states: dict[int, SportGameState],
-        slug_table: dict[int, SportsMarketTag],
+        slug_table: dict[str, list[SportsMarketTag]],
     ) -> None:
         """Main entry point — called each loop iteration (~1s cadence).
 
@@ -174,14 +174,15 @@ class InGameTrader:
 
             # Check for score change
             if current.score_raw != prev.score_raw:
-                market_tag = slug_table.get(game_id)
-                if market_tag is None:
+                tags = slug_table.get(current.slug)
+                if tags is None:
                     print(
                         f"[ingame_trader] event=no_market_tag game_id={game_id} "
-                        f"score_raw={current.score_raw}"
+                        f"slug={current.slug} score_raw={current.score_raw}"
                     )
                     self._prev_game_states[game_id] = current
                     continue
+                market_tag = tags[0]
 
                 self._handle_score_change(game_id, prev, current, market_tag)
                 self._prev_game_states[game_id] = current
@@ -192,7 +193,7 @@ class InGameTrader:
     def handle_period_transition(
         self,
         msg: dict,
-        slug_table: dict[int, SportsMarketTag],
+        slug_table: dict[str, list[SportsMarketTag]],
     ) -> None:
         """Handle period_transition queue message from SportsWSConnector.
 
@@ -204,12 +205,21 @@ class InGameTrader:
             print(f"[ingame_trader] event=period_transition_no_game_id msg={msg}")
             return
 
-        market_tag = slug_table.get(game_id)
-        if market_tag is None:
+        state = msg.get("state")
+        if state is None:
             print(
-                f"[ingame_trader] event=period_transition_no_market_tag game_id={game_id}"
+                f"[ingame_trader] event=period_transition_no_state_in_msg game_id={game_id}"
             )
             return
+
+        tags = slug_table.get(state.slug)
+        if tags is None:
+            print(
+                f"[ingame_trader] event=period_transition_no_market_tag game_id={game_id} "
+                f"slug={state.slug}"
+            )
+            return
+        market_tag = tags[0]
 
         if not self._should_process(game_id):
             print(

@@ -37,13 +37,16 @@ def _game_state(
     league: str = "nba",
     home_team: str = "LAL",
     away_team: str = "BOS",
+    slug: str | None = None,
+    slug_suffix: str = "2026-03-07",
 ):
     from agents.utils.objects import SportGameState
 
+    resolved_slug = slug if slug is not None else f"{league}-lal-bos-{slug_suffix}"
     return SportGameState(
         game_id=game_id,
         league=league,
-        slug=f"{league}-lal-bos-2026-03-07",
+        slug=resolved_slug,
         home_team=home_team,
         away_team=away_team,
         status="InProgress",
@@ -169,7 +172,7 @@ class TestScoreChangeDetection:
         monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "30")
         trader, mocks = _make_trader()
         tag = _market_tag(game_id=1)
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         gs = _game_state(game_id=1, score_raw="0-0")
         current_states = {1: gs}
@@ -190,7 +193,7 @@ class TestScoreChangeDetection:
         monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
         trader, mocks = _make_trader()
         tag = _market_tag(game_id=1)
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         # Establish baseline: home already leading 5-3
         trader._prev_game_states[1] = _game_state(
@@ -209,7 +212,7 @@ class TestScoreChangeDetection:
         monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "30")
         trader, mocks = _make_trader()
         tag = _market_tag(game_id=1)
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         gs = _game_state(game_id=1, score_raw="5-3")
         trader._prev_game_states[1] = gs
@@ -224,7 +227,7 @@ class TestScoreChangeDetection:
         monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "30")
         trader, mocks = _make_trader()
         tag = _market_tag(game_id=1)
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         # Establish baseline
         trader._prev_game_states[1] = _game_state(
@@ -242,7 +245,7 @@ class TestScoreChangeDetection:
         monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
         trader, mocks = _make_trader()
         tag = _market_tag(game_id=1)
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         trader._ended_games.add(1)
         trader._prev_game_states[1] = _game_state(game_id=1, score_raw="5-3")
@@ -471,7 +474,7 @@ class TestSlowPath:
         monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
         trader, mocks = _make_trader()
         tag = _market_tag()
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         # Set baseline with lead change condition
         trader._prev_game_states[1] = _game_state(
@@ -594,7 +597,7 @@ class TestCooldown:
         monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
         trader, mocks = _make_trader(dry_run=False)
         tag = _market_tag()
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         # Establish baseline
         trader._prev_game_states[1] = _game_state(
@@ -629,7 +632,7 @@ class TestCooldown:
         monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
         trader, mocks = _make_trader(dry_run=False)
         tag = _market_tag()
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         # Set cooldown timestamp far in the past
         trader._last_processed[1] = time.time() - 999
@@ -667,7 +670,12 @@ class TestCooldown:
 
         tag1 = _market_tag(game_id=1)
         tag2 = _market_tag(game_id=2)
-        slug_table = {1: tag1, 2: tag2}
+        # Game 1 uses default slug "nba-lal-bos-2026-03-07"
+        # Game 2 uses a different slug with game_id=2
+        slug_table = {
+            "nba-lal-bos-2026-03-07": [tag1],
+            "nba-lal-bos-2026-03-08": [tag2],
+        }
 
         # Game 1 is in cooldown
         trader._last_processed[1] = time.time()  # just processed
@@ -676,14 +684,25 @@ class TestCooldown:
         trader._prev_game_states[1] = _game_state(
             game_id=1, score_raw="3-0", home_score=3, away_score=0
         )
+        # Game 2 uses a different slug date to distinguish it
         trader._prev_game_states[2] = _game_state(
-            game_id=2, score_raw="5-3", home_score=5, away_score=3
+            game_id=2,
+            score_raw="5-3",
+            home_score=5,
+            away_score=3,
+            slug_suffix="2026-03-08",
         )
 
         current = {
             1: _game_state(game_id=1, score_raw="6-0", home_score=6, away_score=0),
             # Game 2: minor event — home still leading, just adds more
-            2: _game_state(game_id=2, score_raw="8-3", home_score=8, away_score=3),
+            2: _game_state(
+                game_id=2,
+                score_raw="8-3",
+                home_score=8,
+                away_score=3,
+                slug_suffix="2026-03-08",
+            ),
         }
         trader.tick(current, slug_table)
 
@@ -849,10 +868,11 @@ class TestPeriodTransition:
         monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
         trader, mocks = _make_trader()
         tag = _market_tag(game_id=1)
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         # Provide a game state for the game
-        trader._prev_game_states[1] = _game_state(game_id=1)
+        state = _game_state(game_id=1)
+        trader._prev_game_states[1] = state
 
         threads_started = []
         original_start = threading.Thread.start
@@ -861,7 +881,7 @@ class TestPeriodTransition:
             threads_started.append(self_thread)
             original_start(self_thread)
 
-        msg = {"game_id": 1, "period": "Q2"}
+        msg = {"game_id": 1, "period": "Q2", "state": state}
 
         with patch.object(threading.Thread, "start", capture_start):
             trader.handle_period_transition(msg, slug_table)
@@ -873,13 +893,14 @@ class TestPeriodTransition:
         monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "30")
         trader, mocks = _make_trader()
         tag = _market_tag(game_id=1)
-        slug_table = {1: tag}
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
 
         # Game is in cooldown
         trader._last_processed[1] = time.time()
-        trader._prev_game_states[1] = _game_state(game_id=1)
+        state = _game_state(game_id=1)
+        trader._prev_game_states[1] = state
 
-        msg = {"game_id": 1, "period": "Q2"}
+        msg = {"game_id": 1, "period": "Q2", "state": state}
         trader.handle_period_transition(msg, slug_table)
 
         # No executor call since game is in cooldown
