@@ -787,3 +787,202 @@ class TestInGameTraderWiring:
         call_args = ingame_instance.handle_period_transition.call_args
         assert call_args[0][0] == msg
         assert call_args[0][1] == slug_table
+
+
+class TestInGameTraderMarketLookup:
+    """Integration tests: verify production-shaped slug_table results in successful market lookup."""
+
+    def test_ingame_trader_market_lookup_succeeds_with_production_slug_table(
+        self, monkeypatch
+    ):
+        """A production-shaped slug_table (dict[str, list[SportsMarketTag]]) causes
+        InGameTrader.tick() to successfully resolve market_tag and enter the fast-path
+        (cache.get() called), proving the lookup is NOT silently returning None.
+        """
+        import time
+
+        from unittest.mock import MagicMock
+
+        from agents.application.ingame_trader import InGameTrader
+        from agents.utils.objects import SportsMarketTag, SportGameState
+
+        monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+
+        # Build a realistic SportsMarketTag
+        tag = SportsMarketTag(
+            slug="nba-lal-bos",
+            league="nba",
+            home_team="LAL",
+            away_team="BOS",
+            market_id="9001",
+            condition_id="0xabc123def456",
+            token_id_yes="tok-yes-001",
+            token_id_no="tok-no-001",
+            question="Will the Lakers win?",
+            outcome_prices="0.6,0.4",
+        )
+
+        # Build production-shaped slug_table: keyed by slug string, value is list
+        slug_table = {"nba-lal-bos": [tag]}
+
+        # Build initial game state (baseline) — score 100-98, Lakers leading
+        gs_initial = SportGameState(
+            game_id=1,
+            league="nba",
+            slug="nba-lal-bos",
+            home_team="LAL",
+            away_team="BOS",
+            status="InProgress",
+            score_raw="100-98",
+            home_score=100,
+            away_score=98,
+            period="Q4",
+            live=True,
+            ended=False,
+        )
+
+        # Build changed game state — score 102-98 (same leader, minor event -> fast-path)
+        gs_changed = SportGameState(
+            game_id=1,
+            league="nba",
+            slug="nba-lal-bos",
+            home_team="LAL",
+            away_team="BOS",
+            status="InProgress",
+            score_raw="102-98",
+            home_score=102,
+            away_score=98,
+            period="Q4",
+            live=True,
+            ended=False,
+        )
+
+        # Wire up mocked dependencies
+        budget = MagicMock()
+        budget.can_spend_sports.return_value = True
+
+        data_connector = MagicMock()
+        data_connector.get_game_context.return_value = {
+            "stats": {},
+            "h2h": [],
+            "odds": {},
+        }
+
+        executor = MagicMock()
+
+        cache = MagicMock()
+        cache.get.return_value = {
+            "game_id": 1,
+            "llm_home_win_prob": 0.70,
+            "llm_away_win_prob": 0.30,
+            "confidence_gap": 0.40,
+            "selected_outcome": "Yes",
+            "selected_side": "BUY",
+            "timestamp": time.time(),
+        }
+
+        polymarket = MagicMock()
+        polymarket.get_orderbook_price.return_value = 0.50  # divergence = 0.20 > 0.10
+
+        # Instantiate a real InGameTrader (not mocked)
+        trader = InGameTrader(
+            budget_coordinator=budget,
+            data_connector=data_connector,
+            executor=executor,
+            cache=cache,
+            dry_run=True,
+            polymarket=polymarket,
+        )
+
+        # First tick: establish baseline
+        trader.tick({1: gs_initial}, slug_table)
+
+        # cache.get() should NOT have been called yet (baseline only)
+        cache.get.assert_not_called()
+
+        # Second tick: score changed -> should resolve market_tag and enter fast-path
+        trader.tick({1: gs_changed}, slug_table)
+
+        # cache.get() MUST have been called — proves market_tag was NOT None (lookup succeeded)
+        cache.get.assert_called_with(1)
+
+    def test_ingame_trader_market_lookup_fails_silently_with_wrong_key_type(
+        self, monkeypatch
+    ):
+        """Regression guard: if slug_table were keyed by int (old bug), cache.get() would
+        never be called because market_tag lookup would return None. This test documents the
+        expected behavior with correct slug-keyed slug_table vs confirms the old int-key
+        behavior was the bug.
+        """
+        import time
+
+        from unittest.mock import MagicMock
+
+        from agents.application.ingame_trader import InGameTrader
+        from agents.utils.objects import SportsMarketTag, SportGameState
+
+        monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+
+        tag = SportsMarketTag(
+            slug="nba-lal-bos",
+            league="nba",
+            home_team="LAL",
+            away_team="BOS",
+            market_id="9001",
+            condition_id="0xabc123",
+            token_id_yes="tok-yes",
+            token_id_no="tok-no",
+            question="Will the Lakers win?",
+        )
+
+        # Miskeyed slug_table (old int-key bug pattern)
+        slug_table_broken = {1: [tag]}  # wrong: game_id int as key, not slug string
+
+        gs_initial = SportGameState(
+            game_id=1,
+            league="nba",
+            slug="nba-lal-bos",
+            home_team="LAL",
+            away_team="BOS",
+            status="InProgress",
+            score_raw="100-98",
+            home_score=100,
+            away_score=98,
+            period="Q4",
+            live=True,
+            ended=False,
+        )
+        gs_changed = SportGameState(
+            game_id=1,
+            league="nba",
+            slug="nba-lal-bos",
+            home_team="LAL",
+            away_team="BOS",
+            status="InProgress",
+            score_raw="102-98",
+            home_score=102,
+            away_score=98,
+            period="Q4",
+            live=True,
+            ended=False,
+        )
+
+        cache = MagicMock()
+        cache.get.return_value = {"llm_home_win_prob": 0.70, "timestamp": time.time()}
+
+        trader = InGameTrader(
+            budget_coordinator=MagicMock(can_spend_sports=MagicMock(return_value=True)),
+            data_connector=MagicMock(),
+            executor=MagicMock(),
+            cache=cache,
+            dry_run=True,
+            polymarket=MagicMock(get_orderbook_price=MagicMock(return_value=0.50)),
+        )
+
+        trader.tick({1: gs_initial}, slug_table_broken)
+        trader.tick({1: gs_changed}, slug_table_broken)
+
+        # With wrong int key, slug_table.get(current.slug) returns None -> cache.get NOT called
+        cache.get.assert_not_called()
