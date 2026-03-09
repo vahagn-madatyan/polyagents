@@ -318,6 +318,7 @@ class TestSportsWSConnectorPeriodTransition(unittest.TestCase):
                 self.assertEqual(event["old_period"], "Q3")
                 self.assertEqual(event["new_period"], "Q4")
                 self.assertIsInstance(event["state"], SportGameState)
+                self.assertEqual(event["game_id"], 19439)
         self.assertTrue(found, "Expected period_transition event in queue")
 
     def test_no_false_period_transition(self) -> None:

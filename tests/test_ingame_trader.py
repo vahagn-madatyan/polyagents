@@ -905,3 +905,105 @@ class TestPeriodTransition:
 
         # No executor call since game is in cooldown
         mocks["executor"].analyze_game.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# TestWalletBalance
+# ---------------------------------------------------------------------------
+
+
+class TestWalletBalance:
+    def test_wallet_balance_stored_from_constructor(self, monkeypatch):
+        """InGameTrader stores wallet_balance passed to constructor as self._wallet_balance."""
+        from agents.application.ingame_trader import InGameTrader
+
+        mocks = _make_mocks()
+        trader = InGameTrader(
+            budget_coordinator=mocks["budget"],
+            data_connector=mocks["data_connector"],
+            executor=mocks["executor"],
+            cache=mocks["cache"],
+            dry_run=True,
+            polymarket=mocks["polymarket"],
+            wallet_balance=500.0,
+        )
+        assert trader._wallet_balance == 500.0
+
+    def test_fast_path_passes_wallet_balance_to_budget_gate(self, monkeypatch):
+        """Fast-path calls can_spend_sports with actual wallet_balance (not 0.0)."""
+        from agents.application.ingame_trader import InGameTrader
+        from unittest.mock import ANY
+
+        monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        mocks = _make_mocks()
+        trader = InGameTrader(
+            budget_coordinator=mocks["budget"],
+            data_connector=mocks["data_connector"],
+            executor=mocks["executor"],
+            cache=mocks["cache"],
+            dry_run=True,
+            polymarket=mocks["polymarket"],
+            wallet_balance=500.0,
+        )
+
+        trader._fast_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["budget"].can_spend_sports.assert_called()
+        call_args = mocks["budget"].can_spend_sports.call_args
+        wallet_balance_arg = (
+            call_args[0][1] if call_args[0] else call_args.kwargs.get("wallet_balance")
+        )
+        assert (
+            wallet_balance_arg == 500.0
+        ), f"Expected 500.0 but got {wallet_balance_arg}"
+
+    def test_slow_path_passes_wallet_balance_to_budget_gate(self, monkeypatch):
+        """Slow-path calls can_spend_sports with actual wallet_balance (not 0.0)."""
+        from agents.application.ingame_trader import InGameTrader
+
+        monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        mocks = _make_mocks()
+        trader = InGameTrader(
+            budget_coordinator=mocks["budget"],
+            data_connector=mocks["data_connector"],
+            executor=mocks["executor"],
+            cache=mocks["cache"],
+            dry_run=True,
+            polymarket=mocks["polymarket"],
+            wallet_balance=500.0,
+        )
+
+        trader._run_slow_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["budget"].can_spend_sports.assert_called()
+        call_args = mocks["budget"].can_spend_sports.call_args
+        wallet_balance_arg = (
+            call_args[0][1] if call_args[0] else call_args.kwargs.get("wallet_balance")
+        )
+        assert (
+            wallet_balance_arg == 500.0
+        ), f"Expected 500.0 but got {wallet_balance_arg}"
+
+    def test_default_wallet_balance_zero_blocks_budget_gate(self, monkeypatch):
+        """InGameTrader constructed without wallet_balance defaults to 0.0, blocking trades when min_wallet_usd=50.0."""
+        monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+
+        trader, mocks = _make_trader()
+
+        # Simulate real BudgetCoordinator behavior: reject if wallet_balance < 50.0
+        mocks["budget"].can_spend_sports.side_effect = lambda amt, wb: wb >= 50.0
+
+        # Establish baseline so first tick does not just store the state
+        trader._prev_game_states[1] = _game_state(game_id=1, score_raw="0-0")
+        tag = _market_tag(game_id=1)
+        slug_table = {"nba-lal-bos-2026-03-07": [tag]}
+
+        # Score change triggers fast-path; with wallet_balance=0.0, budget gate should block
+        gs_new = _game_state(game_id=1, score_raw="5-0", home_score=5, away_score=0)
+        trader.tick({1: gs_new}, slug_table)
+
+        # Budget gate blocked — no order should have been executed
+        mocks["polymarket"].execute_market_order_for_token.assert_not_called()
