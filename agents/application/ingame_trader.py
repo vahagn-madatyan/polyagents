@@ -102,6 +102,7 @@ class InGameTrader:
         cache: "PregameCache",
         dry_run: bool,
         polymarket: Optional["Polymarket"] = None,
+        wallet_balance: float = 0.0,
     ) -> None:
         self._budget = budget_coordinator
         self._data_connector = data_connector
@@ -109,6 +110,7 @@ class InGameTrader:
         self._cache = cache
         self.dry_run = dry_run
         self._polymarket = polymarket
+        self._wallet_balance = wallet_balance
 
         # Read configuration from environment
         self.cooldown_seconds: int = _env_int("SPORTS_INGAME_COOLDOWN_SECONDS", 30)
@@ -384,7 +386,7 @@ class InGameTrader:
             return
 
         # Step 7: budget gate
-        if not self._budget.can_spend_sports(trade_amount, 0.0):
+        if not self._budget.can_spend_sports(trade_amount, self._wallet_balance):
             print(
                 f"[ingame_trader] event=fast_path_skip game_id={game_id} "
                 f"reason=budget_exhausted trade_amount={trade_amount:.2f}"
@@ -510,7 +512,7 @@ class InGameTrader:
                 return
 
             # Step 8: budget gate
-            if not self._budget.can_spend_sports(trade_amount, 0.0):
+            if not self._budget.can_spend_sports(trade_amount, self._wallet_balance):
                 print(
                     f"[ingame_trader] event=slow_path_skip game_id={game_id} "
                     f"reason=budget_exhausted trade_amount={trade_amount:.2f}"

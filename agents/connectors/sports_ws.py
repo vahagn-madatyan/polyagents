@@ -321,6 +321,7 @@ class SportsWSConnector:
         )
         event = {
             "type": "period_transition",
+            "game_id": state.game_id,
             "state": state,
             "old_period": old_period,
             "new_period": new_period,

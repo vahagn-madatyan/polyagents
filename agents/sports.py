@@ -154,6 +154,7 @@ def main() -> None:
         cache=pregame_cache,
         dry_run=dry_run,
         polymarket=polymarket,
+        wallet_balance=wallet_balance,
     )
 
     # Live game state via WebSocket

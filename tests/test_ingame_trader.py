@@ -139,7 +139,9 @@ def _make_mocks():
     }
 
 
-def _make_trader(dry_run=True, mocks=None, monkeypatch=None, **env_overrides):
+def _make_trader(
+    dry_run=True, mocks=None, monkeypatch=None, wallet_balance=0.0, **env_overrides
+):
     """Build an InGameTrader with mocked dependencies."""
     from agents.application.ingame_trader import InGameTrader
 
@@ -157,6 +159,7 @@ def _make_trader(dry_run=True, mocks=None, monkeypatch=None, **env_overrides):
         cache=mocks["cache"],
         dry_run=dry_run,
         polymarket=mocks["polymarket"],
+        wallet_balance=wallet_balance,
     )
     return trader, mocks
 
