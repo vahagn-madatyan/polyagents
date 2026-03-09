@@ -14,19 +14,19 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 - [x] **WS-03**: Bot detects silent websocket freeze (no data for configurable threshold) and forces reconnect
 - [x] **WS-04**: Bot parses and normalizes game state messages (score, period, elapsed, live, ended, status) into structured `SportGameState` objects
 - [x] **WS-05**: Bot handles sport-specific status values and period formats across all supported sports (NFL, NBA, MLB, NHL, CFB, CBB, soccer, esports, tennis)
-- [x] **WS-06**: Bot detects period/quarter transitions and triggers trade re-evaluation at each transition
-- [x] **WS-07**: Bot handles game edge cases (overtime, rain delays, forfeits, suspensions) with configurable trade rules per edge case
+- [ ] **WS-06**: Bot detects period/quarter transitions and triggers trade re-evaluation at each transition
+- [ ] **WS-07**: Bot handles game edge cases (overtime, rain delays, forfeits, suspensions) with configurable trade rules per edge case
 
 ### Market Discovery
 
 - [x] **MKT-01**: Bot identifies sports markets on Polymarket and tags them with metadata (league, teams, game time)
-- [x] **MKT-02**: Bot maps websocket `gameId`/`slug` to Polymarket market IDs and token addresses via Gamma API slug lookup
+- [ ] **MKT-02**: Bot maps websocket `gameId`/`slug` to Polymarket market IDs and token addresses via Gamma API slug lookup
 - [x] **MKT-03**: Bot compares external odds against Polymarket price to detect value bets when divergence exceeds configurable threshold
 
 ### Trading Pipeline
 
 - [x] **TRD-01**: Bot runs pre-game analysis pipeline that evaluates sports markets and places trades before game starts
-- [x] **TRD-02**: Bot executes autonomous in-game trades reacting to live game state changes
+- [ ] **TRD-02**: Bot executes autonomous in-game trades reacting to live game state changes
 - [x] **TRD-03**: Bot triggers trade re-evaluation within 5 seconds of a score change event from the websocket
 - [x] **TRD-04**: Bot uses sports-specific LLM prompts that inject game context (score, period, teams, stats, odds) for trade decisions
 - [x] **TRD-05**: Bot applies score-change debouncing to prevent LLM call queue overflow during rapid game state changes
@@ -85,13 +85,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WS-03 | Phase 1 | Complete |
 | WS-04 | Phase 1 | Complete |
 | WS-05 | Phase 1 | Complete |
-| WS-06 | Phase 1 | Complete |
-| WS-07 | Phase 1 | Complete |
+| WS-06 | Phase 5 | Pending |
+| WS-07 | Phase 6 | Pending |
 | MKT-01 | Phase 2 | Complete |
-| MKT-02 | Phase 2 | Complete |
+| MKT-02 | Phase 6 | Pending |
 | MKT-03 | Phase 2 | Complete |
 | TRD-01 | Phase 3 | Complete |
-| TRD-02 | Phase 4 | Complete |
+| TRD-02 | Phase 5 | Pending |
 | TRD-03 | Phase 4 | Complete |
 | TRD-04 | Phase 3 | Complete |
 | TRD-05 | Phase 4 | Complete |
@@ -108,8 +108,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 **Coverage:**
 - v1 requirements: 24 total
 - Mapped to phases: 24
+- Complete: 20
+- Pending (gap closure): 4 (TRD-02, WS-06, WS-07, MKT-02)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after roadmap creation — all 24 requirements mapped*
+*Last updated: 2026-03-08 after gap closure phase creation — 4 requirements reassigned to Phase 5-6*

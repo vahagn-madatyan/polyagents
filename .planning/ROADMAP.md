@@ -16,6 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Market Discovery and Pipeline Architecture** - Slug-based sports market identification, external stats/odds API connector, budget coordination, and graceful pipeline coexistence
 - [x] **Phase 3: Pre-Game Analysis and LLM Integration** - Sports-specific LLM prompts, pre-game trade positioning pipeline, and probability cache for fast-path live decisions (completed 2026-03-07)
 - [x] **Phase 4: Live In-Game Trading Engine** - Score-change triggered autonomous execution with debounce, fast-path decisions, and game-ended guards (completed 2026-03-08)
+- [ ] **Phase 5: Critical Integration Fixes** - Fix period transition game_id propagation and budget gate wallet balance wiring (gap closure)
+- [ ] **Phase 6: Safety & Resilience Wiring** - Wire should_halt_trading() into production code paths and unmapped slug retry loop (gap closure)
 
 ## Phase Details
 
@@ -82,6 +84,31 @@ Plans:
 - [x] 04-02-PLAN.md — Wire InGameTrader into sports.py event loop, env var documentation, integration tests
 - [ ] 04-03-PLAN.md — Fix slug_table key type mismatch: InGameTrader market lookup uses slug string instead of game_id int (gap closure)
 
+### Phase 5: Critical Integration Fixes
+**Goal**: The in-game trading pipeline works end-to-end: period transitions propagate game_id so slow-path re-analysis fires, and InGameTrader passes actual wallet balance so budget checks succeed.
+**Depends on**: Phase 4
+**Requirements**: TRD-02, WS-06
+**Gap Closure**: Closes critical gaps from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. `_emit_period_transition()` includes `game_id` in the event dict; `handle_period_transition()` receives a valid game_id and triggers slow-path LLM re-analysis
+  2. `InGameTrader` passes actual wallet balance to `can_spend_sports()` instead of hardcoded 0.0; budget gate permits trades when wallet has sufficient funds
+  3. E2E flow "Period Transition → Slow-Path Re-Analysis" completes without dropping events
+
+Plans:
+- (none yet)
+
+### Phase 6: Safety & Resilience Wiring
+**Goal**: Existing safety and resilience functions (`should_halt_trading()`, `lookup_single_slug()`) that passed unit tests are wired into production code paths, so games in abnormal states are gated and unmapped slugs are retried.
+**Depends on**: Phase 5
+**Requirements**: WS-07, MKT-02
+**Gap Closure**: Closes high/medium gaps from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. `should_halt_trading(game_state)` is called in both `InGameTrader._handle_score_change()` and `SportsTrader.run_pregame_analysis()`; games in Suspended/Postponed/Canceled/Forfeit states are blocked from trading
+  2. `sports.py` slug table refresh cycle retries unmapped slugs via `lookup_single_slug()` instead of logging and discarding them
+
+Plans:
+- (none yet)
+
 ## Progress
 
 **Execution Order:**
@@ -93,3 +120,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 2. Market Discovery and Pipeline Architecture | 0/3 | Not started | - |
 | 3. Pre-Game Analysis and LLM Integration | 2/2 | Complete   | 2026-03-07 |
 | 4. Live In-Game Trading Engine | 3/3 | Complete   | 2026-03-08 |
+| 5. Critical Integration Fixes | 0/0 | Not started | - |
+| 6. Safety & Resilience Wiring | 0/0 | Not started | - |
