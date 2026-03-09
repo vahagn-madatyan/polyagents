@@ -93,9 +93,10 @@ Plans:
   1. `_emit_period_transition()` includes `game_id` in the event dict; `handle_period_transition()` receives a valid game_id and triggers slow-path LLM re-analysis
   2. `InGameTrader` passes actual wallet balance to `can_spend_sports()` instead of hardcoded 0.0; budget gate permits trades when wallet has sufficient funds
   3. E2E flow "Period Transition → Slow-Path Re-Analysis" completes without dropping events
+**Plans:** 1 plan
 
 Plans:
-- (none yet)
+- [ ] 05-01-PLAN.md — TDD fix: add game_id to period transition event dict, wire wallet_balance to InGameTrader budget gate
 
 ### Phase 6: Safety & Resilience Wiring
 **Goal**: Existing safety and resilience functions (`should_halt_trading()`, `lookup_single_slug()`) that passed unit tests are wired into production code paths, so games in abnormal states are gated and unmapped slugs are retried.
@@ -112,7 +113,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -120,5 +121,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 2. Market Discovery and Pipeline Architecture | 0/3 | Not started | - |
 | 3. Pre-Game Analysis and LLM Integration | 2/2 | Complete   | 2026-03-07 |
 | 4. Live In-Game Trading Engine | 3/3 | Complete   | 2026-03-08 |
-| 5. Critical Integration Fixes | 0/0 | Not started | - |
+| 5. Critical Integration Fixes | 0/1 | Not started | - |
 | 6. Safety & Resilience Wiring | 0/0 | Not started | - |
