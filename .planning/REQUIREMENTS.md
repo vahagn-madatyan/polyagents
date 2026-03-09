@@ -14,7 +14,7 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 - [x] **WS-03**: Bot detects silent websocket freeze (no data for configurable threshold) and forces reconnect
 - [x] **WS-04**: Bot parses and normalizes game state messages (score, period, elapsed, live, ended, status) into structured `SportGameState` objects
 - [x] **WS-05**: Bot handles sport-specific status values and period formats across all supported sports (NFL, NBA, MLB, NHL, CFB, CBB, soccer, esports, tennis)
-- [ ] **WS-06**: Bot detects period/quarter transitions and triggers trade re-evaluation at each transition
+- [x] **WS-06**: Bot detects period/quarter transitions and triggers trade re-evaluation at each transition
 - [ ] **WS-07**: Bot handles game edge cases (overtime, rain delays, forfeits, suspensions) with configurable trade rules per edge case
 
 ### Market Discovery
@@ -26,7 +26,7 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 ### Trading Pipeline
 
 - [x] **TRD-01**: Bot runs pre-game analysis pipeline that evaluates sports markets and places trades before game starts
-- [ ] **TRD-02**: Bot executes autonomous in-game trades reacting to live game state changes
+- [x] **TRD-02**: Bot executes autonomous in-game trades reacting to live game state changes
 - [x] **TRD-03**: Bot triggers trade re-evaluation within 5 seconds of a score change event from the websocket
 - [x] **TRD-04**: Bot uses sports-specific LLM prompts that inject game context (score, period, teams, stats, odds) for trade decisions
 - [x] **TRD-05**: Bot applies score-change debouncing to prevent LLM call queue overflow during rapid game state changes
@@ -85,13 +85,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WS-03 | Phase 1 | Complete |
 | WS-04 | Phase 1 | Complete |
 | WS-05 | Phase 1 | Complete |
-| WS-06 | Phase 5 | Pending |
+| WS-06 | Phase 5 | Complete |
 | WS-07 | Phase 6 | Pending |
 | MKT-01 | Phase 2 | Complete |
 | MKT-02 | Phase 6 | Pending |
 | MKT-03 | Phase 2 | Complete |
 | TRD-01 | Phase 3 | Complete |
-| TRD-02 | Phase 5 | Pending |
+| TRD-02 | Phase 5 | Complete |
 | TRD-03 | Phase 4 | Complete |
 | TRD-04 | Phase 3 | Complete |
 | TRD-05 | Phase 4 | Complete |

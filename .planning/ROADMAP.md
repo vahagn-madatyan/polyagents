@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Market Discovery and Pipeline Architecture** - Slug-based sports market identification, external stats/odds API connector, budget coordination, and graceful pipeline coexistence
 - [x] **Phase 3: Pre-Game Analysis and LLM Integration** - Sports-specific LLM prompts, pre-game trade positioning pipeline, and probability cache for fast-path live decisions (completed 2026-03-07)
 - [x] **Phase 4: Live In-Game Trading Engine** - Score-change triggered autonomous execution with debounce, fast-path decisions, and game-ended guards (completed 2026-03-08)
-- [ ] **Phase 5: Critical Integration Fixes** - Fix period transition game_id propagation and budget gate wallet balance wiring (gap closure)
+- [x] **Phase 5: Critical Integration Fixes** - Fix period transition game_id propagation and budget gate wallet balance wiring (gap closure) (completed 2026-03-09)
 - [ ] **Phase 6: Safety & Resilience Wiring** - Wire should_halt_trading() into production code paths and unmapped slug retry loop (gap closure)
 
 ## Phase Details
@@ -93,7 +93,7 @@ Plans:
   1. `_emit_period_transition()` includes `game_id` in the event dict; `handle_period_transition()` receives a valid game_id and triggers slow-path LLM re-analysis
   2. `InGameTrader` passes actual wallet balance to `can_spend_sports()` instead of hardcoded 0.0; budget gate permits trades when wallet has sufficient funds
   3. E2E flow "Period Transition → Slow-Path Re-Analysis" completes without dropping events
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 05-01-PLAN.md — TDD fix: add game_id to period transition event dict, wire wallet_balance to InGameTrader budget gate
@@ -121,5 +121,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Market Discovery and Pipeline Architecture | 0/3 | Not started | - |
 | 3. Pre-Game Analysis and LLM Integration | 2/2 | Complete   | 2026-03-07 |
 | 4. Live In-Game Trading Engine | 3/3 | Complete   | 2026-03-08 |
-| 5. Critical Integration Fixes | 0/1 | Not started | - |
+| 5. Critical Integration Fixes | 1/1 | Complete   | 2026-03-09 |
 | 6. Safety & Resilience Wiring | 0/0 | Not started | - |
