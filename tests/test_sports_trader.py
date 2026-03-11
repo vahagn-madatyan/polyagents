@@ -644,3 +644,61 @@ class TestExecutionError:
         trader.run_pregame_analysis(gs.game_id, gs, tag, wallet_balance=500.0)
 
         mocks["budget"].record_sports_trade.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# TestHaltGate (Phase 6)
+# ---------------------------------------------------------------------------
+
+
+class TestHaltGate:
+    def test_suspended_skips_analysis(self):
+        """run_pregame_analysis returns early when game_state.status is 'Suspended'."""
+        from unittest.mock import patch as _patch
+
+        trader, mocks = _make_trader(dry_run=True)
+        gs = _game_state()
+        gs.status = "Suspended"
+        tag = _market_tag()
+
+        trader.run_pregame_analysis(gs.game_id, gs, tag, wallet_balance=100.0)
+
+        assert gs.game_id not in trader._in_flight
+        mocks["data_connector"].get_game_context.assert_not_called()
+
+    def test_forfeit_skips_analysis(self):
+        """run_pregame_analysis returns early when game_state.status is 'Forfeit'."""
+        trader, mocks = _make_trader(dry_run=True)
+        gs = _game_state()
+        gs.status = "Forfeit"
+        tag = _market_tag()
+
+        trader.run_pregame_analysis(gs.game_id, gs, tag, wallet_balance=100.0)
+
+        assert gs.game_id not in trader._in_flight
+        mocks["data_connector"].get_game_context.assert_not_called()
+
+    def test_scheduled_proceeds_normally(self):
+        """run_pregame_analysis proceeds normally when game_state.status is 'scheduled'."""
+        from unittest.mock import patch as _patch
+
+        trader, mocks = _make_trader(dry_run=True)
+        gs = _game_state()
+        gs.status = "scheduled"
+        tag = _market_tag()
+
+        with _patch.object(trader, "_analyze_and_trade") as mock_aat:
+            trader.run_pregame_analysis(gs.game_id, gs, tag, wallet_balance=100.0)
+            mock_aat.assert_called_once()
+
+    def test_halted_logs_trading_halted(self, capsys):
+        """run_pregame_analysis logs event=trading_halted when status is a halt status."""
+        trader, mocks = _make_trader(dry_run=True)
+        gs = _game_state()
+        gs.status = "Suspended"
+        tag = _market_tag()
+
+        trader.run_pregame_analysis(gs.game_id, gs, tag, wallet_balance=100.0)
+
+        captured = capsys.readouterr()
+        assert "trading_halted" in captured.out

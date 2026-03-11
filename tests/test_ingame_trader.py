@@ -1010,3 +1010,124 @@ class TestWalletBalance:
 
         # Budget gate blocked — no order should have been executed
         mocks["polymarket"].execute_market_order_for_token.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# TestHaltGate (Phase 6)
+# ---------------------------------------------------------------------------
+
+
+class TestHaltGate:
+    def test_suspended_pauses_without_ending_game(self, monkeypatch):
+        """_handle_score_change returns early on Suspended status; game_id NOT in _ended_games."""
+        from unittest.mock import patch as _patch
+
+        trader, mocks = _make_trader()
+        prev = _game_state(game_id=1)
+        current = _game_state(game_id=1)
+        current.status = "Suspended"
+        tag = _market_tag()
+
+        with _patch.object(trader, "handle_game_ended") as mock_hge:
+            trader._handle_score_change(1, prev, current, tag)
+            mock_hge.assert_not_called()
+
+        assert 1 not in trader._ended_games
+
+    def test_delayed_pauses_without_ending_game(self, monkeypatch):
+        """_handle_score_change returns early on Delayed status; game_id NOT in _ended_games."""
+        from unittest.mock import patch as _patch
+
+        trader, mocks = _make_trader()
+        prev = _game_state(game_id=1)
+        current = _game_state(game_id=1)
+        current.status = "Delayed"
+        tag = _market_tag()
+
+        with _patch.object(trader, "handle_game_ended") as mock_hge:
+            trader._handle_score_change(1, prev, current, tag)
+            mock_hge.assert_not_called()
+
+        assert 1 not in trader._ended_games
+
+    def test_forfeit_triggers_hard_halt(self, monkeypatch):
+        """_handle_score_change calls handle_game_ended() on Forfeit status."""
+        from unittest.mock import patch as _patch
+
+        trader, mocks = _make_trader()
+        prev = _game_state(game_id=1)
+        current = _game_state(game_id=1)
+        current.status = "Forfeit"
+        tag = _market_tag()
+
+        with _patch.object(trader, "handle_game_ended") as mock_hge:
+            trader._handle_score_change(1, prev, current, tag)
+            mock_hge.assert_called_once_with(1)
+
+    def test_canceled_triggers_hard_halt(self, monkeypatch):
+        """_handle_score_change calls handle_game_ended() on Canceled status."""
+        from unittest.mock import patch as _patch
+
+        trader, mocks = _make_trader()
+        prev = _game_state(game_id=1)
+        current = _game_state(game_id=1)
+        current.status = "Canceled"
+        tag = _market_tag()
+
+        with _patch.object(trader, "handle_game_ended") as mock_hge:
+            trader._handle_score_change(1, prev, current, tag)
+            mock_hge.assert_called_once_with(1)
+
+    def test_inprogress_proceeds_normally(self, monkeypatch):
+        """_handle_score_change calls _should_process when current.status is InProgress."""
+        monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
+        from unittest.mock import patch as _patch
+
+        trader, mocks = _make_trader()
+        prev = _game_state(game_id=1)
+        current = _game_state(game_id=1)
+        current.status = "InProgress"
+        tag = _market_tag()
+
+        with _patch.object(trader, "_should_process", return_value=False) as mock_sp:
+            trader._handle_score_change(1, prev, current, tag)
+            mock_sp.assert_called_once_with(1)
+
+    def test_auto_resume_after_suspended(self, monkeypatch):
+        """After Suspended state, next tick with InProgress resumes trading normally."""
+        monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
+        from unittest.mock import patch as _patch
+
+        trader, mocks = _make_trader()
+        prev = _game_state(game_id=1)
+        tag = _market_tag()
+
+        # First tick: Suspended — should pause
+        suspended = _game_state(game_id=1)
+        suspended.status = "Suspended"
+        with _patch.object(trader, "handle_game_ended") as mock_hge:
+            trader._handle_score_change(1, prev, suspended, tag)
+            mock_hge.assert_not_called()
+
+        # Second tick: InProgress — should resume (calls _should_process)
+        inprogress = _game_state(game_id=1)
+        inprogress.status = "InProgress"
+        with _patch.object(trader, "_should_process", return_value=False) as mock_sp:
+            trader._handle_score_change(1, prev, inprogress, tag)
+            mock_sp.assert_called_once_with(1)
+
+    def test_lowercase_suspended_triggers_pause(self, monkeypatch):
+        """Lowercase 'suspended' (esports) also triggers pause behavior."""
+        from unittest.mock import patch as _patch
+
+        trader, mocks = _make_trader()
+        prev = _game_state(game_id=1)
+        current = _game_state(game_id=1)
+        current.status = "suspended"
+        tag = _market_tag()
+
+        with _patch.object(trader, "handle_game_ended") as mock_hge:
+            trader._handle_score_change(1, prev, current, tag)
+            mock_hge.assert_not_called()
+
+        assert 1 not in trader._ended_games

@@ -19,6 +19,8 @@ from agents.connectors.sports_ws import (
     reconnect_delay,
     should_halt_trading,
     HALT_STATUSES,
+    PAUSE_STATUSES,
+    HARD_HALT_STATUSES,
 )
 
 
@@ -723,6 +725,36 @@ class TestEndedGameTTLPurge(unittest.TestCase):
 
         # Active game should NOT be purged
         self.assertIn(state.game_id, connector._game_states)
+
+
+# ---------------------------------------------------------------------------
+# Phase 6: Status categorization tests
+# ---------------------------------------------------------------------------
+
+
+class TestStatusCategorization(unittest.TestCase):
+
+    def test_pause_statuses_exact_set(self) -> None:
+        """PAUSE_STATUSES contains exactly Suspended, Postponed, Delayed."""
+        self.assertEqual(PAUSE_STATUSES, {"Suspended", "Postponed", "Delayed"})
+
+    def test_hard_halt_statuses_exact_set(self) -> None:
+        """HARD_HALT_STATUSES contains exactly Forfeit, Canceled, NotNecessary, Awarded."""
+        self.assertEqual(
+            HARD_HALT_STATUSES, {"Forfeit", "Canceled", "NotNecessary", "Awarded"}
+        )
+
+    def test_halt_statuses_is_union_of_pause_and_hard_halt(self) -> None:
+        """HALT_STATUSES == PAUSE_STATUSES | HARD_HALT_STATUSES (backward compat)."""
+        self.assertEqual(HALT_STATUSES, PAUSE_STATUSES | HARD_HALT_STATUSES)
+
+    def test_halt_statuses_count_seven(self) -> None:
+        """len(HALT_STATUSES) == 7 — existing tests rely on this."""
+        self.assertEqual(len(HALT_STATUSES), 7)
+
+    def test_no_overlap_between_pause_and_hard_halt(self) -> None:
+        """PAUSE_STATUSES and HARD_HALT_STATUSES are disjoint."""
+        self.assertEqual(PAUSE_STATUSES & HARD_HALT_STATUSES, set())
 
 
 if __name__ == "__main__":
