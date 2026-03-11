@@ -15,7 +15,7 @@ Requirements for sports mode launch. Each maps to roadmap phases.
 - [x] **WS-04**: Bot parses and normalizes game state messages (score, period, elapsed, live, ended, status) into structured `SportGameState` objects
 - [x] **WS-05**: Bot handles sport-specific status values and period formats across all supported sports (NFL, NBA, MLB, NHL, CFB, CBB, soccer, esports, tennis)
 - [x] **WS-06**: Bot detects period/quarter transitions and triggers trade re-evaluation at each transition
-- [ ] **WS-07**: Bot handles game edge cases (overtime, rain delays, forfeits, suspensions) with configurable trade rules per edge case
+- [x] **WS-07**: Bot handles game edge cases (overtime, rain delays, forfeits, suspensions) with configurable trade rules per edge case
 
 ### Market Discovery
 
@@ -86,7 +86,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WS-04 | Phase 1 | Complete |
 | WS-05 | Phase 1 | Complete |
 | WS-06 | Phase 5 | Complete |
-| WS-07 | Phase 6 | Pending |
+| WS-07 | Phase 6 | Complete |
 | MKT-01 | Phase 2 | Complete |
 | MKT-02 | Phase 6 | Complete |
 | MKT-03 | Phase 2 | Complete |

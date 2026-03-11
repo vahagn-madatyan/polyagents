@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Pre-Game Analysis and LLM Integration** - Sports-specific LLM prompts, pre-game trade positioning pipeline, and probability cache for fast-path live decisions (completed 2026-03-07)
 - [x] **Phase 4: Live In-Game Trading Engine** - Score-change triggered autonomous execution with debounce, fast-path decisions, and game-ended guards (completed 2026-03-08)
 - [x] **Phase 5: Critical Integration Fixes** - Fix period transition game_id propagation and budget gate wallet balance wiring (gap closure) (completed 2026-03-09)
-- [ ] **Phase 6: Safety & Resilience Wiring** - Wire should_halt_trading() into production code paths and unmapped slug retry loop (gap closure)
+- [x] **Phase 6: Safety & Resilience Wiring** - Wire should_halt_trading() into production code paths and unmapped slug retry loop (gap closure) (completed 2026-03-11)
 
 ## Phase Details
 
@@ -106,7 +106,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. `should_halt_trading(game_state)` is called in both `InGameTrader._handle_score_change()` and `SportsTrader.run_pregame_analysis()`; games in Suspended/Postponed/Canceled/Forfeit states are blocked from trading
   2. `sports.py` slug table refresh cycle retries unmapped slugs via `lookup_single_slug()` instead of logging and discarding them
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 06-01-PLAN.md — Wire should_halt_trading() into InGameTrader and SportsTrader with pause-resume/hard-halt status routing
@@ -124,4 +124,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Pre-Game Analysis and LLM Integration | 2/2 | Complete   | 2026-03-07 |
 | 4. Live In-Game Trading Engine | 3/3 | Complete   | 2026-03-08 |
 | 5. Critical Integration Fixes | 1/1 | Complete   | 2026-03-09 |
-| 6. Safety & Resilience Wiring | 1/2 | In Progress|  |
+| 6. Safety & Resilience Wiring | 2/2 | Complete   | 2026-03-11 |

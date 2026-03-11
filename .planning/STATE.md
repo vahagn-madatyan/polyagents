@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 06-02-PLAN.md: slug retry with exponential backoff and tag validation"
-last_updated: "2026-03-11T02:04:55.694Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-11T02:05:50.892Z"
 last_activity: "2026-03-06 — Completed 03-01: SportsExecutor, sports prompts, PregameCache, SportsAnalysisCache"
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 60
 ---
 
@@ -62,6 +62,7 @@ Progress: [██████░░░░] 60%
 | Phase 04-live-in-game-trading-engine P03 | 12 | 2 tasks | 3 files |
 | Phase 05-critical-integration-fixes P01 | 141 | 2 tasks | 5 files |
 | Phase 06-safety-resilience-wiring P02 | 2 | 1 tasks | 3 files |
+| Phase 06-safety-resilience-wiring P01 | 3 | 1 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - [Phase 05-critical-integration-fixes]: period transition event dict includes game_id from state.game_id — one-line fix closes silent drop on every period transition
 - [Phase 06-safety-resilience-wiring]: Backoff formula min(1.0 * 2^(attempt-1), 8.0) caps at 8s to avoid excessive slug-refresh delay
 - [Phase 06-safety-resilience-wiring]: Tag validation in both build_slug_table and retry_unmapped_slugs — prevents any invalid tag from entering slug_table
+- [Phase 06-safety-resilience-wiring]: HALT_STATUSES redefined as PAUSE_STATUSES | HARD_HALT_STATUSES union, backward compat with all existing 7-member set tests
+- [Phase 06-safety-resilience-wiring]: SportsTrader skips without cancelling orders on hard-halt — only InGameTrader owns order cancellation authority
+- [Phase 06-safety-resilience-wiring]: Halt gate placed before _should_process in _handle_score_change — abnormal states bypass cooldown and in-flight checks
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T02:04:55.692Z
-Stopped at: Completed 06-02-PLAN.md: slug retry with exponential backoff and tag validation
+Last session: 2026-03-11T02:05:50.889Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
