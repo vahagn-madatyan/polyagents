@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
@@ -427,6 +428,57 @@ class GammaMarketClient:
         away_team = teams[1] if len(teams) > 1 else ""
         return self.lookup_markets_fallback(league, home_team, away_team)
 
+    def _validate_market_tag(self, tag: "SportsMarketTag") -> bool:
+        """Return True if tag has non-empty tokenId and conditionId fields for trading."""
+        return bool(tag.token_id_yes and tag.token_id_no and tag.condition_id)
+
+    def retry_unmapped_slugs(
+        self,
+        unmapped: "list[str]",
+        slug_table: "dict[str, list[SportsMarketTag]]",
+        max_attempts: "int | None" = None,
+    ) -> "tuple[dict[str, list[SportsMarketTag]], list[str]]":
+        """Retry unmapped slugs with exponential backoff.
+
+        For each slug in unmapped:
+          1. Try lookup_single_slug() up to max_attempts times.
+          2. Validate each returned tag (non-empty token/condition ids).
+          3. If validated tags found, add to slug_table.
+          4. If all attempts exhausted, add to still_unmapped.
+
+        Returns: (updated_slug_table, still_unmapped)
+        """
+        if max_attempts is None:
+            val = os.getenv("SPORTS_SLUG_RETRY_MAX_ATTEMPTS", "3")
+            try:
+                max_attempts = int(val)
+            except ValueError:
+                max_attempts = 3
+
+        still_unmapped: list[str] = []
+        for slug in unmapped:
+            resolved = False
+            for attempt in range(max_attempts):
+                if attempt > 0:
+                    delay = min(1.0 * (2 ** (attempt - 1)), 8.0)
+                    time.sleep(delay)
+                tags = self.lookup_single_slug(slug)
+                valid_tags = [t for t in tags if self._validate_market_tag(t)]
+                if valid_tags:
+                    slug_table[slug] = valid_tags
+                    print(
+                        f"[gamma_slug] event=retry_success slug={slug} attempt={attempt + 1}"
+                    )
+                    resolved = True
+                    break
+            if not resolved:
+                print(
+                    f"[gamma_slug] event=slug_permanently_unmapped slug={slug} "
+                    f"max_attempts={max_attempts}"
+                )
+                still_unmapped.append(slug)
+        return slug_table, still_unmapped
+
     def build_slug_table(
         self, game_states: "dict[int, SportGameState]"
     ) -> "tuple[dict[str, list[SportsMarketTag]], list[str]]":
@@ -435,7 +487,8 @@ class GammaMarketClient:
         For each game:
           1. Try lookup_markets_by_slug (fast path).
           2. If empty, try lookup_markets_fallback.
-          3. If still empty, log as unmapped and add to retry list.
+          3. Validate tags — filter out tags with empty token/condition ids.
+          4. If no valid tags remain, log as unmapped and add to retry list.
 
         Returns:
             (slug_table, unmapped_slugs) where unmapped_slugs is the retry queue.
@@ -450,7 +503,15 @@ class GammaMarketClient:
                     game_state.league, game_state.home_team, game_state.away_team
                 )
             if tags:
-                slug_table[slug] = tags
+                valid_tags = [t for t in tags if self._validate_market_tag(t)]
+                if valid_tags:
+                    slug_table[slug] = valid_tags
+                else:
+                    print(
+                        f"[gamma_slug] event=validation_failed slug={slug} "
+                        f"tags_invalid={len(tags)}"
+                    )
+                    unmapped.append(slug)
             else:
                 print(f"[gamma_slug] event=unmapped slug={slug} game_id={game_id}")
                 unmapped.append(slug)

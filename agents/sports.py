@@ -177,9 +177,13 @@ def main() -> None:
 
         game_states = connector.get_all_game_states()
         slug_table, unmapped = gamma_client.build_slug_table(game_states)
+        if unmapped:
+            slug_table, unmapped = gamma_client.retry_unmapped_slugs(
+                unmapped, slug_table
+            )
         print(
             f"[sports_pipeline] event=slug_table_built "
-            f"mapped={len(slug_table)} unmapped={len(unmapped)}"
+            f"mapped={len(slug_table)} unmapped_after_retry={len(unmapped)}"
         )
 
         # Trigger point 1: Pre-game analysis for newly mapped games on slug table build
@@ -221,9 +225,13 @@ def main() -> None:
             if now - last_slug_refresh >= slug_refresh_interval:
                 game_states = connector.get_all_game_states()
                 slug_table, unmapped = gamma_client.build_slug_table(game_states)
+                if unmapped:
+                    slug_table, unmapped = gamma_client.retry_unmapped_slugs(
+                        unmapped, slug_table
+                    )
                 print(
                     f"[sports_pipeline] event=slug_table_refreshed "
-                    f"mapped={len(slug_table)} unmapped={len(unmapped)}"
+                    f"mapped={len(slug_table)} unmapped_after_retry={len(unmapped)}"
                 )
                 last_slug_refresh = now
 
