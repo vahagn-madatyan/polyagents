@@ -5,9 +5,9 @@ milestone_name: Hardening
 status: active
 stopped_at: null
 last_updated: "2026-03-10"
-last_activity: "2026-03-10 — Milestone v1.1 started"
+last_activity: "2026-03-10 — Roadmap created for v1.1 (3 phases, 10 requirements)"
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,20 +21,40 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Autonomously execute profitable sports trades by combining real-time Polymarket game state with historical team performance data, reacting faster than manual traders.
-**Current focus:** Defining requirements for v1.1 Hardening
+**Current focus:** Phase 7 — Code Quality and State Persistence (ready to plan)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 7 of 9 (Code Quality and State Persistence)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-10 — Milestone v1.1 started
+Status: Ready to plan
+Last activity: 2026-03-10 — Roadmap created, v1.1 phases 7-9 defined
+
+Progress: [░░░░░░░░░░] 0%
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 0 (this milestone)
+- Average duration: —
+- Total execution time: —
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| - | - | - | - |
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
 ### Decisions
 
-Archived in PROJECT.md Key Decisions table. Full history in `.planning/milestones/v1.0-phases/` SUMMARY.md files.
+Archived in PROJECT.md Key Decisions table.
+
+v1.1 context:
+- Env helper duplication is an intentional v1.0 tradeoff (avoiding heavy executor.py imports in lightweight modules) — consolidation must preserve this constraint
 
 ### Pending Todos
 
@@ -42,13 +62,11 @@ None.
 
 ### Blockers/Concerns
 
-Carried forward from v1.0 (being addressed this milestone):
-- Slug normalization across all 9 sport types needs validation with live Polymarket data
-- Score-change debounce thresholds are sport-specific; currently env vars with defaults
-- CLOB rate limit (60 orders/min) shared across pipelines; validate under concurrent load
+- Slug normalization validation requires live Polymarket data — must run Phase 9 tests during an active game window
+- CLOB rate limit validation requires both pipelines active concurrently — coordinate test timing
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Defining requirements for v1.1
+Stopped at: Roadmap created for v1.1 Hardening milestone
 Resume file: None

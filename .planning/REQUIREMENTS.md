@@ -48,22 +48,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PERS-01 | — | Pending |
-| PERS-02 | — | Pending |
-| PERS-03 | — | Pending |
-| VALID-01 | — | Pending |
-| VALID-02 | — | Pending |
-| VALID-03 | — | Pending |
-| QUAL-01 | — | Pending |
-| QUAL-02 | — | Pending |
+| PIPE-01 | Phase 8 | Pending |
+| PIPE-02 | Phase 8 | Pending |
+| PERS-01 | Phase 8 | Pending |
+| PERS-02 | Phase 7 | Pending |
+| PERS-03 | Phase 7 | Pending |
+| VALID-01 | Phase 9 | Pending |
+| VALID-02 | Phase 9 | Pending |
+| VALID-03 | Phase 9 | Pending |
+| QUAL-01 | Phase 7 | Pending |
+| QUAL-02 | Phase 7 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10 ⚠️
+- Mapped to phases: 10
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-10*
-*Last updated: 2026-03-10 after initial definition*
+*Last updated: 2026-03-10 after roadmap creation (v1.1 phases 7-9)*
