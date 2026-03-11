@@ -448,3 +448,275 @@ class TestLookupSingleSlug:
         assert call_count >= 2  # slug path + fallback
         # fallback may or may not find results depending on team matching logic
         assert isinstance(results, list)
+
+
+# ---------------------------------------------------------------------------
+# Helper: build a valid SportsMarketTag for retry tests
+# ---------------------------------------------------------------------------
+
+
+def make_valid_tag(slug: str = "nfl-lac-buf-2025-01-26") -> SportsMarketTag:
+    """Factory: SportsMarketTag with all non-empty ids (tradable)."""
+    return SportsMarketTag(
+        slug=slug,
+        league="nfl",
+        home_team="LAC",
+        away_team="BUF",
+        market_id="99001",
+        condition_id="0xABC",
+        token_id_yes="token_yes_001",
+        token_id_no="token_no_001",
+        question="Will the Los Angeles Chargers win?",
+    )
+
+
+def make_invalid_tag(slug: str = "nfl-lac-buf-2025-01-26") -> SportsMarketTag:
+    """Factory: SportsMarketTag with empty token_id_yes (not tradable)."""
+    return SportsMarketTag(
+        slug=slug,
+        league="nfl",
+        home_team="LAC",
+        away_team="BUF",
+        market_id="99002",
+        condition_id="0xABC",
+        token_id_yes="",  # invalid
+        token_id_no="token_no_001",
+        question="Will the Los Angeles Chargers win?",
+    )
+
+
+# ---------------------------------------------------------------------------
+# GammaMarketClient._validate_market_tag tests
+# ---------------------------------------------------------------------------
+
+
+class TestValidateMarketTag:
+    def setup_method(self):
+        self.client = GammaMarketClient.__new__(GammaMarketClient)
+
+    def test_valid_tag_returns_true(self):
+        """Tag with non-empty token_id_yes, token_id_no, and condition_id returns True."""
+        tag = make_valid_tag()
+        assert self.client._validate_market_tag(tag) is True
+
+    def test_empty_token_id_yes_returns_false(self):
+        """Tag with empty token_id_yes returns False."""
+        tag = SportsMarketTag(
+            slug="nfl-lac-buf-2025-01-26",
+            league="nfl",
+            home_team="LAC",
+            away_team="BUF",
+            market_id="99001",
+            condition_id="0xABC",
+            token_id_yes="",
+            token_id_no="token_no_001",
+            question="Will LAC win?",
+        )
+        assert self.client._validate_market_tag(tag) is False
+
+    def test_empty_token_id_no_returns_false(self):
+        """Tag with empty token_id_no returns False."""
+        tag = SportsMarketTag(
+            slug="nfl-lac-buf-2025-01-26",
+            league="nfl",
+            home_team="LAC",
+            away_team="BUF",
+            market_id="99001",
+            condition_id="0xABC",
+            token_id_yes="token_yes_001",
+            token_id_no="",
+            question="Will LAC win?",
+        )
+        assert self.client._validate_market_tag(tag) is False
+
+    def test_empty_condition_id_returns_false(self):
+        """Tag with empty condition_id returns False."""
+        tag = SportsMarketTag(
+            slug="nfl-lac-buf-2025-01-26",
+            league="nfl",
+            home_team="LAC",
+            away_team="BUF",
+            market_id="99001",
+            condition_id="",
+            token_id_yes="token_yes_001",
+            token_id_no="token_no_001",
+            question="Will LAC win?",
+        )
+        assert self.client._validate_market_tag(tag) is False
+
+
+# ---------------------------------------------------------------------------
+# GammaMarketClient.build_slug_table validation tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildSlugTableValidation:
+    def setup_method(self):
+        self.client = GammaMarketClient.__new__(GammaMarketClient)
+        self.client.gamma_url = "https://gamma-api.polymarket.com"
+        self.client.gamma_markets_endpoint = self.client.gamma_url + "/markets"
+        self.client.gamma_events_endpoint = self.client.gamma_url + "/events"
+        self.client.http_client = MagicMock()
+
+    def test_tags_with_empty_token_id_yes_go_to_unmapped(self):
+        """build_slug_table moves tags with empty token_id_yes to unmapped list."""
+        invalid_tag = make_invalid_tag()
+        self.client.lookup_markets_by_slug = MagicMock(return_value=[invalid_tag])
+        self.client.lookup_markets_fallback = MagicMock(return_value=[])
+
+        game_states = {
+            1: make_sport_game_state(game_id=1, slug="nfl-lac-buf-2025-01-26"),
+        }
+        slug_table, unmapped = self.client.build_slug_table(game_states)
+
+        assert "nfl-lac-buf-2025-01-26" not in slug_table
+        assert "nfl-lac-buf-2025-01-26" in unmapped
+
+    def test_tags_with_valid_ids_stay_in_slug_table(self):
+        """build_slug_table keeps tags with valid token/condition ids in slug_table."""
+        valid_tag = make_valid_tag()
+        self.client.lookup_markets_by_slug = MagicMock(return_value=[valid_tag])
+        self.client.lookup_markets_fallback = MagicMock(return_value=[])
+
+        game_states = {
+            1: make_sport_game_state(game_id=1, slug="nfl-lac-buf-2025-01-26"),
+        }
+        slug_table, unmapped = self.client.build_slug_table(game_states)
+
+        assert "nfl-lac-buf-2025-01-26" in slug_table
+        assert len(unmapped) == 0
+
+
+# ---------------------------------------------------------------------------
+# GammaMarketClient.retry_unmapped_slugs tests
+# ---------------------------------------------------------------------------
+
+
+class TestRetryUnmappedSlugs:
+    def setup_method(self):
+        self.client = GammaMarketClient.__new__(GammaMarketClient)
+        self.client.gamma_url = "https://gamma-api.polymarket.com"
+        self.client.gamma_markets_endpoint = self.client.gamma_url + "/markets"
+        self.client.gamma_events_endpoint = self.client.gamma_url + "/events"
+        self.client.http_client = MagicMock()
+
+    def test_retry_succeeds_on_first_attempt(self):
+        """slug added to slug_table when lookup succeeds on first retry attempt."""
+        valid_tag = make_valid_tag()
+        self.client.lookup_single_slug = MagicMock(return_value=[valid_tag])
+
+        slug_table: dict = {}
+        unmapped = ["nfl-lac-buf-2025-01-26"]
+
+        with patch("agents.polymarket.gamma.time") as mock_time:
+            updated_table, still_unmapped = self.client.retry_unmapped_slugs(
+                unmapped, slug_table, max_attempts=3
+            )
+
+        assert "nfl-lac-buf-2025-01-26" in updated_table
+        assert "nfl-lac-buf-2025-01-26" not in still_unmapped
+
+    def test_retry_succeeds_on_second_attempt(self):
+        """slug added to slug_table after first lookup returns empty."""
+        valid_tag = make_valid_tag()
+        self.client.lookup_single_slug = MagicMock(side_effect=[[], [valid_tag]])
+
+        slug_table: dict = {}
+        unmapped = ["nfl-lac-buf-2025-01-26"]
+
+        with patch("agents.polymarket.gamma.time") as mock_time:
+            updated_table, still_unmapped = self.client.retry_unmapped_slugs(
+                unmapped, slug_table, max_attempts=3
+            )
+
+        assert "nfl-lac-buf-2025-01-26" in updated_table
+        assert "nfl-lac-buf-2025-01-26" not in still_unmapped
+
+    def test_retry_exhausts_max_attempts(self):
+        """slug remains in still_unmapped when all attempts are exhausted."""
+        self.client.lookup_single_slug = MagicMock(side_effect=[[], [], []])
+
+        slug_table: dict = {}
+        unmapped = ["nfl-lac-buf-2025-01-26"]
+
+        with patch("agents.polymarket.gamma.time") as mock_time:
+            updated_table, still_unmapped = self.client.retry_unmapped_slugs(
+                unmapped, slug_table, max_attempts=3
+            )
+
+        assert "nfl-lac-buf-2025-01-26" not in updated_table
+        assert "nfl-lac-buf-2025-01-26" in still_unmapped
+
+    def test_retry_validates_tags_invalid_tag_stays_unmapped(self):
+        """lookup returns tag with empty token_id, tag rejected, slug stays unmapped."""
+        invalid_tag = make_invalid_tag()
+        self.client.lookup_single_slug = MagicMock(
+            side_effect=[[invalid_tag], [invalid_tag], [invalid_tag]]
+        )
+
+        slug_table: dict = {}
+        unmapped = ["nfl-lac-buf-2025-01-26"]
+
+        with patch("agents.polymarket.gamma.time") as mock_time:
+            updated_table, still_unmapped = self.client.retry_unmapped_slugs(
+                unmapped, slug_table, max_attempts=3
+            )
+
+        assert "nfl-lac-buf-2025-01-26" not in updated_table
+        assert "nfl-lac-buf-2025-01-26" in still_unmapped
+
+    def test_retry_respects_max_attempts_override(self):
+        """max_attempts=1 means single try only."""
+        self.client.lookup_single_slug = MagicMock(return_value=[])
+
+        slug_table: dict = {}
+        unmapped = ["nfl-lac-buf-2025-01-26"]
+
+        with patch("agents.polymarket.gamma.time") as mock_time:
+            updated_table, still_unmapped = self.client.retry_unmapped_slugs(
+                unmapped, slug_table, max_attempts=1
+            )
+
+        assert self.client.lookup_single_slug.call_count == 1
+        assert "nfl-lac-buf-2025-01-26" in still_unmapped
+
+    def test_retry_with_empty_unmapped_list_returns_unchanged(self):
+        """retry with empty unmapped list returns (slug_table, []) unchanged."""
+        slug_table = {
+            "nfl-kc-den-2025-01-26": [make_valid_tag("nfl-kc-den-2025-01-26")]
+        }
+
+        with patch("agents.polymarket.gamma.time") as mock_time:
+            updated_table, still_unmapped = self.client.retry_unmapped_slugs(
+                [], slug_table, max_attempts=3
+            )
+
+        assert updated_table == slug_table
+        assert still_unmapped == []
+
+    def test_retry_logs_event_retry_success(self, capsys):
+        """retry logs event=retry_success on successful retry."""
+        valid_tag = make_valid_tag()
+        self.client.lookup_single_slug = MagicMock(side_effect=[[], [valid_tag]])
+
+        slug_table: dict = {}
+        unmapped = ["nfl-lac-buf-2025-01-26"]
+
+        with patch("agents.polymarket.gamma.time") as mock_time:
+            self.client.retry_unmapped_slugs(unmapped, slug_table, max_attempts=3)
+
+        captured = capsys.readouterr()
+        assert "retry_success" in captured.out
+
+    def test_retry_logs_event_slug_permanently_unmapped(self, capsys):
+        """retry logs event=slug_permanently_unmapped on exhaustion."""
+        self.client.lookup_single_slug = MagicMock(return_value=[])
+
+        slug_table: dict = {}
+        unmapped = ["nfl-lac-buf-2025-01-26"]
+
+        with patch("agents.polymarket.gamma.time") as mock_time:
+            self.client.retry_unmapped_slugs(unmapped, slug_table, max_attempts=3)
+
+        captured = capsys.readouterr()
+        assert "slug_permanently_unmapped" in captured.out
