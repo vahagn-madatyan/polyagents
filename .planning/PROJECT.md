@@ -32,7 +32,19 @@ Autonomously identify and execute profitable sports trades by combining real-tim
 
 ### Active
 
-(None — define in next milestone)
+## Current Milestone: v1.1 Hardening
+
+**Goal:** Resolve all carried-forward tech debt, validate robustness under live conditions, and clean up code quality issues from v1.0.
+
+**Target features:**
+- Wire `detect_value_bet()` into the trading pipeline as a filter/signal
+- Live-refresh `wallet_balance` instead of stale startup snapshot
+- Persist `_order_log` and `_ended_games` to survive process restarts
+- Validate slug normalization across all 9 sports with live Polymarket data
+- Tune sport-specific score-change debounce thresholds
+- Validate CLOB rate limiting under concurrent sports + general pipeline load
+- Consolidate inline env helper duplication across modules
+- Resolve pre-existing TODO in `agents/utils/objects.py:107`
 
 ### Out of Scope
 
@@ -75,4 +87,4 @@ Autonomously identify and execute profitable sports trades by combining real-tim
 | Inline env helpers per module | Avoids heavy executor.py import chain (langchain/openai deps) in lightweight modules | ⚠️ Revisit — some duplication across modules |
 
 ---
-*Last updated: 2026-03-11 after v1.0 milestone*
+*Last updated: 2026-03-10 after v1.1 milestone start*

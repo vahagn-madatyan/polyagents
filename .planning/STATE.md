@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Sports Mode
-status: complete
-stopped_at: Milestone v1.0 complete
-last_updated: "2026-03-11"
-last_activity: "2026-03-11 — Milestone v1.0 Sports Mode shipped"
+milestone: v1.1
+milestone_name: Hardening
+status: active
+stopped_at: null
+last_updated: "2026-03-10"
+last_activity: "2026-03-10 — Milestone v1.1 started"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-11)
+See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Autonomously execute profitable sports trades by combining real-time Polymarket game state with historical team performance data, reacting faster than manual traders.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v1.1 Hardening
 
 ## Current Position
 
-Milestone: v1.0 Sports Mode — SHIPPED 2026-03-11
-Status: Complete — all 6 phases, 13 plans, 24 requirements delivered
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-10 — Milestone v1.1 started
 
 ## Accumulated Context
 
@@ -42,13 +42,13 @@ None.
 
 ### Blockers/Concerns
 
-Carried forward for next milestone:
+Carried forward from v1.0 (being addressed this milestone):
 - Slug normalization across all 9 sport types needs validation with live Polymarket data
 - Score-change debounce thresholds are sport-specific; currently env vars with defaults
 - CLOB rate limit (60 orders/min) shared across pipelines; validate under concurrent load
 
 ## Session Continuity
 
-Last session: 2026-03-11
-Stopped at: Milestone v1.0 complete
+Last session: 2026-03-10
+Stopped at: Defining requirements for v1.1
 Resume file: None
