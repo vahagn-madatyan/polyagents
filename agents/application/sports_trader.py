@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Optional
 
+from agents.connectors.sports_ws import should_halt_trading
 from agents.utils.objects import CandidateTrade, SportGameState, SportsMarketTag
 
 if TYPE_CHECKING:
@@ -115,6 +116,14 @@ class SportsTrader:
             print(
                 f"[sports_trader] event=skip_ended game_id={game_id} "
                 f"league={game_state.league}"
+            )
+            return
+
+        # Phase 6: safety gate — skip analysis on halted game states
+        if should_halt_trading(game_state):
+            print(
+                f"[sports_trader] event=trading_halted game_id={game_id} "
+                f"status={game_state.status}"
             )
             return
 

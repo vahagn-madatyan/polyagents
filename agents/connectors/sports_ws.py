@@ -59,17 +59,13 @@ def reconnect_delay(attempt: int, base: float = 1.0, max_delay: float = 60.0) ->
     return exp + jitter
 
 
-HALT_STATUSES = {
-    "Suspended",
-    "Postponed",
-    "Canceled",
-    "Forfeit",
-    "Delayed",
-    "NotNecessary",
-    "Awarded",
-}
+PAUSE_STATUSES = {"Suspended", "Postponed", "Delayed"}
+HARD_HALT_STATUSES = {"Forfeit", "Canceled", "NotNecessary", "Awarded"}
+HALT_STATUSES = PAUSE_STATUSES | HARD_HALT_STATUSES
 # Lowercase versions for esports/tennis which use lowercase status values
 _HALT_STATUSES_LOWER = {s.lower() for s in HALT_STATUSES}
+_PAUSE_STATUSES_LOWER = {s.lower() for s in PAUSE_STATUSES}
+_HARD_HALT_STATUSES_LOWER = {s.lower() for s in HARD_HALT_STATUSES}
 
 
 def should_halt_trading(state: "SportGameState") -> bool:  # noqa: F821

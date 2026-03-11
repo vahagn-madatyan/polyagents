@@ -14,6 +14,11 @@ import threading
 import time
 from typing import TYPE_CHECKING, Optional
 
+from agents.connectors.sports_ws import (
+    should_halt_trading,
+    HARD_HALT_STATUSES,
+    _HARD_HALT_STATUSES_LOWER,
+)
 from agents.utils.objects import SportGameState, SportsMarketTag
 
 if TYPE_CHECKING:
@@ -266,6 +271,24 @@ class InGameTrader:
         market_tag: SportsMarketTag,
     ) -> None:
         """Classify score change and route to fast or slow path."""
+        # Phase 6: safety gate — halt/pause on abnormal game states
+        if should_halt_trading(current):
+            if (
+                current.status in HARD_HALT_STATUSES
+                or current.status.lower() in _HARD_HALT_STATUSES_LOWER
+            ):
+                print(
+                    f"[ingame_trader] event=hard_halt game_id={game_id} "
+                    f"status={current.status} cancelling_orders=true"
+                )
+                self.handle_game_ended(game_id)
+            else:
+                print(
+                    f"[ingame_trader] event=trading_paused game_id={game_id} "
+                    f"status={current.status}"
+                )
+            return
+
         if not self._should_process(game_id):
             print(
                 f"[ingame_trader] event=score_change_skipped game_id={game_id} "
