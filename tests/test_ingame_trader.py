@@ -924,6 +924,174 @@ class TestPeriodTransition:
 
 
 # ---------------------------------------------------------------------------
+# TestValueBetFilter
+# ---------------------------------------------------------------------------
+
+
+class TestValueBetFilter:
+    def test_counter_initialized_in_constructor(self, monkeypatch):
+        trader, _ = _make_trader(monkeypatch=monkeypatch)
+        assert trader._no_value_bet_count == 0
+
+    def test_fast_path_skips_when_detect_value_bet_false(self, monkeypatch, capsys):
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        trader, mocks = _make_trader(dry_run=False, monkeypatch=monkeypatch)
+        mocks["cache"].get.return_value = {
+            "game_id": 1,
+            "llm_home_win_prob": 0.70,
+            "implied_home_prob": 0.55,
+        }
+        mocks["data_connector"].detect_value_bet.return_value = False
+
+        trader._fast_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["data_connector"].detect_value_bet.assert_called_once_with(0.50, 0.55)
+        mocks["polymarket"].execute_market_order_for_token.assert_not_called()
+        assert trader._no_value_bet_count == 1
+        assert "event=no_value_bet" in capsys.readouterr().out
+
+    def test_fast_path_skips_value_bet_check_when_implied_prob_missing(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        trader, mocks = _make_trader(dry_run=False, monkeypatch=monkeypatch)
+        mocks["cache"].get.return_value = {
+            "game_id": 1,
+            "llm_home_win_prob": 0.70,
+        }
+
+        trader._fast_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["data_connector"].detect_value_bet.assert_not_called()
+        mocks["polymarket"].execute_market_order_for_token.assert_called_once()
+
+    def test_fast_path_allows_trade_when_detect_value_bet_true(self, monkeypatch):
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        trader, mocks = _make_trader(dry_run=False, monkeypatch=monkeypatch)
+        mocks["cache"].get.return_value = {
+            "game_id": 1,
+            "llm_home_win_prob": 0.70,
+            "implied_home_prob": 0.55,
+        }
+        mocks["data_connector"].detect_value_bet.return_value = True
+
+        trader._fast_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["data_connector"].detect_value_bet.assert_called_once_with(0.50, 0.55)
+        mocks["polymarket"].execute_market_order_for_token.assert_called_once()
+
+    def test_slow_path_skips_when_detect_value_bet_false(self, monkeypatch, capsys):
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        trader, mocks = _make_trader(dry_run=False, monkeypatch=monkeypatch)
+        mocks["data_connector"].get_game_context.return_value = {
+            "stats": {},
+            "h2h": [],
+            "external_odds": {"implied_home_prob": 0.55},
+        }
+        mocks["data_connector"].detect_value_bet.return_value = False
+
+        trader._run_slow_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["data_connector"].detect_value_bet.assert_called_once_with(0.6, 0.55)
+        mocks["executor"].analyze_game.assert_not_called()
+        assert trader._no_value_bet_count == 1
+        assert "event=no_value_bet" in capsys.readouterr().out
+
+    def test_slow_path_allows_trade_when_external_odds_missing(self, monkeypatch):
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        trader, mocks = _make_trader(dry_run=False, monkeypatch=monkeypatch)
+        mocks["data_connector"].get_game_context.return_value = {
+            "stats": {},
+            "h2h": [],
+            "external_odds": None,
+        }
+
+        trader._run_slow_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["data_connector"].detect_value_bet.assert_not_called()
+        mocks["executor"].analyze_game.assert_called_once()
+
+    def test_counter_increments_across_both_paths(self, monkeypatch):
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        trader, mocks = _make_trader(dry_run=False, monkeypatch=monkeypatch)
+        mocks["data_connector"].detect_value_bet.return_value = False
+        mocks["cache"].get.return_value = {
+            "game_id": 1,
+            "llm_home_win_prob": 0.70,
+            "implied_home_prob": 0.55,
+        }
+
+        trader._fast_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["data_connector"].get_game_context.return_value = {
+            "stats": {},
+            "h2h": [],
+            "external_odds": {"implied_home_prob": 0.55},
+        }
+        trader._run_slow_path(2, _game_state(game_id=2), _market_tag(game_id=2))
+
+        assert trader._no_value_bet_count == 2
+
+
+# ---------------------------------------------------------------------------
+# TestWalletRefreshWiring
+# ---------------------------------------------------------------------------
+
+
+class TestWalletRefreshWiring:
+    def test_fast_path_refreshes_wallet_before_budget_gate(self, monkeypatch):
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        trader, mocks = _make_trader(
+            dry_run=False, monkeypatch=monkeypatch, wallet_balance=500.0
+        )
+        mocks["budget"].refresh_wallet_balance.return_value = 900.0
+
+        trader._fast_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["budget"].refresh_wallet_balance.assert_called_once_with(
+            mocks["polymarket"]
+        )
+        assert trader._wallet_balance == 900.0
+        assert mocks["budget"].can_spend_sports.call_args[0][1] == 900.0
+
+    def test_slow_path_refreshes_wallet_before_budget_gate(self, monkeypatch):
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        trader, mocks = _make_trader(
+            dry_run=False, monkeypatch=monkeypatch, wallet_balance=500.0
+        )
+        mocks["budget"].refresh_wallet_balance.return_value = 900.0
+
+        trader._run_slow_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["budget"].refresh_wallet_balance.assert_called_once_with(
+            mocks["polymarket"]
+        )
+        assert trader._wallet_balance == 900.0
+        assert mocks["budget"].can_spend_sports.call_args[0][1] == 900.0
+
+    def test_slow_path_refresh_uses_none_polymarket_in_dry_run(self, monkeypatch):
+        from agents.application.ingame_trader import InGameTrader
+
+        monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
+        mocks = _make_mocks()
+        mocks["budget"].refresh_wallet_balance.return_value = 500.0
+        trader = InGameTrader(
+            budget_coordinator=mocks["budget"],
+            data_connector=mocks["data_connector"],
+            executor=mocks["executor"],
+            cache=mocks["cache"],
+            dry_run=True,
+            polymarket=None,
+            wallet_balance=500.0,
+        )
+
+        trader._run_slow_path(1, _game_state(game_id=1), _market_tag())
+
+        mocks["budget"].refresh_wallet_balance.assert_called_once_with(None)
+        assert trader._wallet_balance == 500.0
+
+
+# ---------------------------------------------------------------------------
 # TestWalletBalance
 # ---------------------------------------------------------------------------
 

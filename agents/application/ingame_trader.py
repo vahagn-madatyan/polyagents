@@ -124,6 +124,7 @@ class InGameTrader:
         self.dry_run = dry_run
         self._polymarket = polymarket
         self._wallet_balance = wallet_balance
+        self._no_value_bet_count: int = 0
 
         # Read configuration from environment
         self.cooldown_seconds: int = _env_int("SPORTS_INGAME_COOLDOWN_SECONDS", 30)
@@ -399,6 +400,19 @@ class InGameTrader:
             self._mark_processed(game_id)
             return
 
+        # Step 2.5: value-bet filter using cached pre-game implied probability.
+        implied_prob = cache_entry.get("implied_home_prob")
+        if implied_prob is not None:
+            if not self._data_connector.detect_value_bet(live_price, implied_prob):
+                self._no_value_bet_count += 1
+                print(
+                    f"[ingame_trader] event=no_value_bet game_id={game_id} "
+                    f"polymarket_price={live_price:.4f} implied_prob={implied_prob:.4f} "
+                    f"filtered={self._no_value_bet_count}"
+                )
+                self._mark_processed(game_id)
+                return
+
         # Step 3: compute divergence
         divergence = abs(llm_prob - live_price)
         if divergence < self.min_confidence_gap:
@@ -429,6 +443,9 @@ class InGameTrader:
             )
             self._mark_processed(game_id)
             return
+
+        # Step 6.5: refresh wallet balance before the budget gate.
+        self._wallet_balance = self._budget.refresh_wallet_balance(self._polymarket)
 
         # Step 7: budget gate
         if not self._budget.can_spend_sports(trade_amount, self._wallet_balance):
@@ -488,6 +505,26 @@ class InGameTrader:
             # Step 1: fetch game context
             game_context = self._data_connector.get_game_context(current)
 
+            # Step 1.5: value-bet filter using the fresh game context odds.
+            external_odds = game_context.get("external_odds")
+            if external_odds is not None:
+                try:
+                    polymarket_price = float(market_tag.outcome_prices.split(",")[0])
+                    implied_prob = external_odds.get("implied_home_prob", 0.0)
+                    if not self._data_connector.detect_value_bet(
+                        polymarket_price, implied_prob
+                    ):
+                        self._no_value_bet_count += 1
+                        print(
+                            f"[ingame_trader] event=no_value_bet game_id={game_id} "
+                            f"polymarket_price={polymarket_price:.4f} "
+                            f"implied_prob={implied_prob:.4f} "
+                            f"filtered={self._no_value_bet_count}"
+                        )
+                        return
+                except (AttributeError, ValueError):
+                    pass
+
             # Step 2: LLM analysis
             candidate = self._executor.analyze_game(current, market_tag, game_context)
 
@@ -524,6 +561,9 @@ class InGameTrader:
                 "polymarket_price_at_analysis": (
                     candidate.outcome_prices[0] if candidate.outcome_prices else 0.0
                 ),
+                "implied_home_prob": (
+                    (game_context.get("external_odds") or {}).get("implied_home_prob")
+                ),
                 "trade_attempted": False,
                 "trade_error": None,
             }
@@ -555,6 +595,9 @@ class InGameTrader:
                     f"reason=exposure_cap trade_amount={trade_amount:.2f}"
                 )
                 return
+
+            # Step 7.5: refresh wallet balance before the budget gate.
+            self._wallet_balance = self._budget.refresh_wallet_balance(self._polymarket)
 
             # Step 8: budget gate
             if not self._budget.can_spend_sports(trade_amount, self._wallet_balance):
