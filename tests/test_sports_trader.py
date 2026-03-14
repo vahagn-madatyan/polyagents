@@ -92,12 +92,14 @@ def _make_mocks(
     budget = MagicMock()
     budget.can_spend_sports.return_value = True
     budget.get_sport_cap.return_value = 100.0  # cap = $100
+    budget.refresh_wallet_balance.return_value = 500.0
 
     data_connector = MagicMock()
     data_connector.get_game_context.return_value = {
         "stats": {"home_win_pct": 0.62},
         "h2h": [],
         "odds": {"home": 0.6},
+        "external_odds": {"implied_home_prob": 0.55, "implied_away_prob": 0.45},
     }
 
     candidate = _candidate_trade(
@@ -357,6 +359,7 @@ class TestRunPregameAnalysis:
             "selected_side",
             "size_fraction",
             "rationale",
+            "implied_home_prob",
         ]
         for field in required_fields:
             assert field in captured_entry, f"Missing field: {field}"
@@ -479,9 +482,10 @@ class TestBudgetGate:
         mocks["polymarket"].execute_market_order_for_token.assert_not_called()
 
     def test_can_spend_called_with_wallet_balance(self):
-        """budget.can_spend_sports() is called with correct trade_amount and wallet_balance."""
+        """budget.can_spend_sports() uses the refreshed wallet balance."""
         mocks = _make_mocks(confidence_gap=0.20, parsed_size_fraction=0.05)
         mocks["budget"].get_sport_cap.return_value = 100.0  # $100 cap
+        mocks["budget"].refresh_wallet_balance.return_value = 800.0
 
         trader, mocks = _make_trader(dry_run=False, mocks=mocks)
         gs = _game_state()
@@ -491,8 +495,101 @@ class TestBudgetGate:
 
         # trade_amount = 0.05 * 100 = 5.0
         mocks["budget"].can_spend_sports.assert_called_once_with(
-            pytest.approx(5.0), 777.0
+            pytest.approx(5.0), 800.0
         )
+
+
+class TestValueBetFilter:
+    def test_skips_analysis_when_no_value_bet(self, capsys):
+        mocks = _make_mocks()
+        mocks["data_connector"].detect_value_bet.return_value = False
+
+        trader, mocks = _make_trader(dry_run=True, mocks=mocks)
+        gs = _game_state()
+        tag = _market_tag()
+
+        trader.run_pregame_analysis(gs.game_id, gs, tag, wallet_balance=500.0)
+
+        captured = capsys.readouterr()
+        mocks["data_connector"].detect_value_bet.assert_called_once_with(0.6, 0.55)
+        mocks["executor"].analyze_game.assert_not_called()
+        assert "event=no_value_bet" in captured.out
+
+    def test_increments_filtered_counter_in_log(self, capsys):
+        mocks = _make_mocks()
+        mocks["data_connector"].detect_value_bet.return_value = False
+
+        trader, mocks = _make_trader(dry_run=True, mocks=mocks)
+        gs = _game_state()
+        tag = _market_tag()
+
+        trader.run_pregame_analysis(gs.game_id, gs, tag, wallet_balance=500.0)
+        trader.run_pregame_analysis(gs.game_id + 1, _game_state(game_id=2), tag, 500.0)
+
+        captured = capsys.readouterr()
+        assert trader._no_value_bet_count == 2
+        assert "filtered=2" in captured.out
+
+    def test_skips_value_bet_check_when_external_odds_missing(self):
+        mocks = _make_mocks()
+        mocks["data_connector"].get_game_context.return_value = {
+            "stats": {"home_win_pct": 0.62},
+            "h2h": [],
+            "odds": {"home": 0.6},
+            "external_odds": None,
+        }
+
+        trader, mocks = _make_trader(dry_run=True, mocks=mocks)
+        gs = _game_state()
+        tag = _market_tag()
+
+        trader.run_pregame_analysis(gs.game_id, gs, tag, wallet_balance=500.0)
+
+        mocks["data_connector"].detect_value_bet.assert_not_called()
+        mocks["executor"].analyze_game.assert_called_once()
+
+    def test_skips_value_bet_check_when_outcome_prices_malformed(self):
+        mocks = _make_mocks()
+        mocks["data_connector"].detect_value_bet.return_value = False
+
+        trader, mocks = _make_trader(dry_run=True, mocks=mocks)
+        gs = _game_state()
+        bad_tag = _market_tag()
+        bad_tag.outcome_prices = "bad-data"
+
+        trader.run_pregame_analysis(gs.game_id, gs, bad_tag, wallet_balance=500.0)
+
+        mocks["data_connector"].detect_value_bet.assert_not_called()
+        mocks["executor"].analyze_game.assert_called_once()
+
+    def test_build_cache_entry_includes_implied_home_prob(self):
+        trader, mocks = _make_trader(dry_run=True)
+        gs = _game_state()
+        tag = _market_tag()
+        game_context = mocks["data_connector"].get_game_context.return_value
+
+        entry = trader._build_cache_entry(
+            gs.game_id, gs, mocks["candidate"], tag, game_context
+        )
+
+        assert entry["implied_home_prob"] == pytest.approx(0.55)
+
+    def test_build_cache_entry_sets_implied_home_prob_none_without_external_odds(self):
+        trader, mocks = _make_trader(dry_run=True)
+        gs = _game_state()
+        tag = _market_tag()
+        game_context = {
+            "stats": {"home_win_pct": 0.62},
+            "h2h": [],
+            "odds": {"home": 0.6},
+            "external_odds": None,
+        }
+
+        entry = trader._build_cache_entry(
+            gs.game_id, gs, mocks["candidate"], tag, game_context
+        )
+
+        assert entry["implied_home_prob"] is None
 
 
 # ---------------------------------------------------------------------------

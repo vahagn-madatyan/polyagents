@@ -56,6 +56,7 @@ class SportsTrader:
 
         # Track in-flight game analyses (prevents duplicate concurrent calls)
         self._in_flight: set[int] = set()
+        self._no_value_bet_count: int = 0
 
     # ------------------------------------------------------------------
     # Public API
@@ -122,6 +123,26 @@ class SportsTrader:
         # Step 1: fetch game context (stats, H2H, odds)
         game_context = self.data_connector.get_game_context(game_state)
 
+        # Step 1.5: value-bet filter (skip LLM if no odds divergence)
+        external_odds = game_context.get("external_odds")
+        if external_odds is not None:
+            try:
+                polymarket_price = float(market_tag.outcome_prices.split(",")[0])
+                implied_prob = float(external_odds.get("implied_home_prob", 0.0))
+                if not self.data_connector.detect_value_bet(
+                    polymarket_price, implied_prob
+                ):
+                    self._no_value_bet_count += 1
+                    print(
+                        f"[sports_trader] event=no_value_bet game_id={game_id} "
+                        f"polymarket_price={polymarket_price:.4f} "
+                        f"implied_prob={implied_prob:.4f} "
+                        f"filtered={self._no_value_bet_count}"
+                    )
+                    return
+            except (ValueError, AttributeError, IndexError, TypeError):
+                pass
+
         # Step 2: LLM analysis
         candidate: Optional[CandidateTrade] = self.executor.analyze_game(
             game_state, market_tag, game_context
@@ -137,7 +158,7 @@ class SportsTrader:
         # Step 3: Build and write cache entry BEFORE trade gates
         # (ensures Phase 4 can read probability even if trade is skipped)
         cache_entry = self._build_cache_entry(
-            game_id, game_state, candidate, market_tag
+            game_id, game_state, candidate, market_tag, game_context
         )
         self.cache.set(game_id, cache_entry)
 
@@ -173,10 +194,16 @@ class SportsTrader:
             return
 
         # Step 5b: Budget gate
-        if not self.budget_coordinator.can_spend_sports(trade_amount, wallet_balance):
+        refreshed_balance = self.budget_coordinator.refresh_wallet_balance(
+            self.polymarket
+        )
+        if not self.budget_coordinator.can_spend_sports(
+            trade_amount, refreshed_balance
+        ):
             print(
                 f"[sports_trader] event=skip_budget_exhausted game_id={game_id} "
-                f"trade_amount={trade_amount:.2f} wallet_balance={wallet_balance:.2f}"
+                f"trade_amount={trade_amount:.2f} "
+                f"wallet_balance={refreshed_balance:.2f}"
             )
             print(
                 f"[sports_trader] event=pregame_complete game_id={game_id} "
@@ -237,6 +264,7 @@ class SportsTrader:
         game_state: SportGameState,
         candidate: CandidateTrade,
         market_tag: SportsMarketTag,
+        game_context: dict,
     ) -> dict:
         """Build SportsAnalysisCache-compatible dict from CandidateTrade."""
         # Extract probabilities for home/away win
@@ -260,6 +288,10 @@ class SportsTrader:
         if isinstance(exec_resp, dict):
             superforecast_response = str(exec_resp.get("superforecast_response", ""))
             trade_response = str(exec_resp.get("trade_recommendation", ""))
+        external_odds = game_context.get("external_odds")
+        implied_home_prob = None
+        if isinstance(external_odds, dict):
+            implied_home_prob = external_odds.get("implied_home_prob")
 
         return {
             "game_id": game_id,
@@ -276,6 +308,7 @@ class SportsTrader:
             "risk_factors": candidate.risk_factors,
             "counter_case": candidate.counter_case,
             "polymarket_price_at_analysis": polymarket_price,
+            "implied_home_prob": implied_home_prob,
             "superforecast_response": superforecast_response,
             "trade_response": trade_response,
             "trade_attempted": False,
