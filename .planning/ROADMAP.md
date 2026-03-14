@@ -40,7 +40,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. The TODO in `agents/utils/objects.py:107` is resolved — forward reference either validated or corrected
   3. `_order_log` is written to a file on each update and reloaded on startup so no trade history is lost on restart
   4. `_ended_games` is written to a file on each update and reloaded on startup so no game-end state is lost on restart
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 07-01-PLAN.md — Consolidate env helpers into shared module and fix objects.py TODO
@@ -76,6 +76,6 @@ Plans:
 | 4. Live In-Game Trading Engine | v1.0 | 3/3 | Complete | 2026-03-08 |
 | 5. Critical Integration Fixes | v1.0 | 1/1 | Complete | 2026-03-09 |
 | 6. Safety & Resilience Wiring | v1.0 | 2/2 | Complete | 2026-03-11 |
-| 7. Code Quality and State Persistence | v1.1 | 0/2 | Planning complete | - |
+| 7. Code Quality and State Persistence | 1/2 | In Progress|  | - |
 | 8. Pipeline Integration | v1.1 | 0/TBD | Not started | - |
 | 9. Live Validation | v1.1 | 0/TBD | Not started | - |

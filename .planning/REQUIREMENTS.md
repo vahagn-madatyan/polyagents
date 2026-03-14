@@ -26,8 +26,8 @@ Requirements for hardening release. Each maps to roadmap phases.
 
 ### Code Quality
 
-- [ ] **QUAL-01**: Env helper functions are centralized in a single shared module (eliminating duplication across 7+ files)
-- [ ] **QUAL-02**: TODO in `agents/utils/objects.py:107` is resolved (forward reference validated or fixed)
+- [x] **QUAL-01**: Env helper functions are centralized in a single shared module (eliminating duplication across 7+ files)
+- [x] **QUAL-02**: TODO in `agents/utils/objects.py:107` is resolved (forward reference validated or fixed)
 
 ## Future Requirements
 
@@ -56,8 +56,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VALID-01 | Phase 9 | Pending |
 | VALID-02 | Phase 9 | Pending |
 | VALID-03 | Phase 9 | Pending |
-| QUAL-01 | Phase 7 | Pending |
-| QUAL-02 | Phase 7 | Pending |
+| QUAL-01 | Phase 7 | Complete |
+| QUAL-02 | Phase 7 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 10 total
