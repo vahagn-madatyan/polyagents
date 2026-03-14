@@ -4,6 +4,8 @@ import time
 from dataclasses import dataclass, field
 from filelock import FileLock, Timeout
 
+_WALLET_REFRESH_COOLDOWN_SECONDS = 30
+
 
 @dataclass
 class TradeRecord:
@@ -60,6 +62,7 @@ class BudgetCoordinator:
 
     def __init__(self, wallet_balance: float) -> None:
         self.wallet_balance = max(0.0, float(wallet_balance))
+        self._last_wallet_refresh: float = 0.0
 
         # Core config
         budget_fraction = _env_float("SPORTS_BUDGET_FRACTION", 0.30)
@@ -116,6 +119,29 @@ class BudgetCoordinator:
             return False
         remaining = self.get_sports_budget()
         return float(amount) <= remaining
+
+    def refresh_wallet_balance(self, polymarket) -> float:
+        """Refresh wallet balance from Polymarket with a short cooldown."""
+        if polymarket is None:
+            return self.wallet_balance
+
+        now = time.time()
+        if (now - self._last_wallet_refresh) < _WALLET_REFRESH_COOLDOWN_SECONDS:
+            return self.wallet_balance
+
+        try:
+            balance = float(polymarket.get_usdc_balance())
+        except Exception as exc:
+            print(
+                f"[budget_coordinator] warn=wallet_refresh_failed error={exc} "
+                f"using_cached={self.wallet_balance:.2f}"
+            )
+            return self.wallet_balance
+
+        self.wallet_balance = balance
+        self._last_wallet_refresh = time.time()
+        print(f"[budget_coordinator] event=wallet_refreshed balance={balance:.2f}")
+        return balance
 
     def get_sport_cap(self, league: str) -> float:
         """

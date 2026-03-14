@@ -6,6 +6,7 @@ import json
 import os
 import threading
 import time
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -248,3 +249,66 @@ class TestConcurrentAccess:
         assert isinstance(data["sports"], float)
         # 300 - 6 trades * 10 = 240
         assert data["sports"] == pytest.approx(240.0)
+
+
+class TestWalletRefresh:
+    def test_refresh_wallet_balance_updates_cached_balance(self, budget_env):
+        bc = BudgetCoordinator(wallet_balance=1000.0)
+        polymarket = MagicMock()
+        polymarket.get_usdc_balance.return_value = 812.34
+
+        balance = bc.refresh_wallet_balance(polymarket)
+
+        assert balance == pytest.approx(812.34)
+        assert bc.wallet_balance == pytest.approx(812.34)
+        polymarket.get_usdc_balance.assert_called_once_with()
+
+    def test_refresh_wallet_balance_uses_cooldown(self, budget_env):
+        bc = BudgetCoordinator(wallet_balance=1000.0)
+        polymarket = MagicMock()
+        polymarket.get_usdc_balance.return_value = 777.0
+
+        with patch(
+            "agents.application.budget.time.time", side_effect=[100.0, 100.0, 110.0]
+        ):
+            first = bc.refresh_wallet_balance(polymarket)
+            second = bc.refresh_wallet_balance(polymarket)
+
+        assert first == pytest.approx(777.0)
+        assert second == pytest.approx(777.0)
+        assert polymarket.get_usdc_balance.call_count == 1
+
+    def test_refresh_wallet_balance_refreshes_after_cooldown(self, budget_env):
+        bc = BudgetCoordinator(wallet_balance=1000.0)
+        polymarket = MagicMock()
+        polymarket.get_usdc_balance.side_effect = [777.0, 755.0]
+
+        with patch(
+            "agents.application.budget.time.time",
+            side_effect=[100.0, 100.0, 131.0, 131.0],
+        ):
+            first = bc.refresh_wallet_balance(polymarket)
+            second = bc.refresh_wallet_balance(polymarket)
+
+        assert first == pytest.approx(777.0)
+        assert second == pytest.approx(755.0)
+        assert polymarket.get_usdc_balance.call_count == 2
+
+    def test_refresh_wallet_balance_falls_back_on_api_error(self, budget_env, capsys):
+        bc = BudgetCoordinator(wallet_balance=444.0)
+        polymarket = MagicMock()
+        polymarket.get_usdc_balance.side_effect = RuntimeError("boom")
+
+        balance = bc.refresh_wallet_balance(polymarket)
+
+        captured = capsys.readouterr()
+        assert balance == pytest.approx(444.0)
+        assert bc.wallet_balance == pytest.approx(444.0)
+        assert "warn=wallet_refresh_failed" in captured.out
+
+    def test_refresh_wallet_balance_skips_when_polymarket_missing(self, budget_env):
+        bc = BudgetCoordinator(wallet_balance=555.0)
+
+        balance = bc.refresh_wallet_balance(None)
+
+        assert balance == pytest.approx(555.0)
