@@ -10,7 +10,7 @@ Requirements for hardening release. Each maps to roadmap phases.
 ### Pipeline Integration
 
 - [x] **PIPE-01**: Pre-game analysis calls `detect_value_bet()` to flag value opportunities before placing trades
-- [ ] **PIPE-02**: In-game fast-path calls `detect_value_bet()` to validate trades against external odds divergence
+- [x] **PIPE-02**: In-game fast-path calls `detect_value_bet()` to validate trades against external odds divergence
 
 ### Persistence
 
@@ -49,7 +49,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PIPE-01 | Phase 8 | Complete |
-| PIPE-02 | Phase 8 | Pending |
+| PIPE-02 | Phase 8 | Complete |
 | PERS-01 | Phase 8 | Complete |
 | PERS-02 | Phase 7 | Complete |
 | PERS-03 | Phase 7 | Complete |

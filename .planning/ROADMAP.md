@@ -26,7 +26,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 **Milestone Goal:** Resolve all v1.0 tech debt, harden persistence and pipeline integration, and validate robustness under live conditions.
 
 - [x] **Phase 7: Code Quality and State Persistence** - Consolidate env helper duplication, resolve objects.py TODO, and persist in-memory trading state to survive restarts
-- [ ] **Phase 8: Pipeline Integration** - Wire `detect_value_bet()` into pre-game and in-game fast-path, and add live wallet balance refresh
+- [x] **Phase 8: Pipeline Integration** - Wire `detect_value_bet()` into pre-game and in-game fast-path, and add live wallet balance refresh
 - [ ] **Phase 9: Live Validation** - Validate slug normalization across all 9 sports, tune per-sport debounce thresholds, and confirm CLOB rate limiting under concurrent load
 
 ## Phase Details
@@ -54,11 +54,11 @@ Plans:
   1. Pre-game analysis calls `detect_value_bet()` and trades are only placed when a value opportunity is flagged
   2. In-game fast-path calls `detect_value_bet()` and skips execution when no odds divergence is detected
   3. `wallet_balance` is refreshed at runtime (not just at startup) so budget calculations reflect current USDC holdings
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 
 Plans:
 - [x] 08-01-PLAN.md — Pre-game value bet filter, wallet refresh method, and cache augmentation
-- [ ] 08-02-PLAN.md — In-game value bet filter and wallet refresh wiring
+- [x] 08-02-PLAN.md — In-game value bet filter and wallet refresh wiring
 
 ### Phase 9: Live Validation
 **Goal**: The system behaves correctly under live Polymarket conditions across all sports and concurrent pipeline load
@@ -81,5 +81,5 @@ Plans:
 | 5. Critical Integration Fixes | v1.0 | 1/1 | Complete | 2026-03-09 |
 | 6. Safety & Resilience Wiring | v1.0 | 2/2 | Complete | 2026-03-11 |
 | 7. Code Quality and State Persistence | v1.1 | 2/2 | Complete | 2026-03-13 |
-| 8. Pipeline Integration | v1.1 | 1/2 | In Progress | - |
+| 8. Pipeline Integration | v1.1 | 2/2 | Complete | 2026-03-14 |
 | 9. Live Validation | v1.1 | 0/TBD | Not started | - |
