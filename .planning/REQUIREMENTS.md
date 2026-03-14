@@ -15,8 +15,8 @@ Requirements for hardening release. Each maps to roadmap phases.
 ### Persistence
 
 - [ ] **PERS-01**: `wallet_balance` is periodically refreshed during pipeline execution (not just at startup)
-- [ ] **PERS-02**: `_order_log` is persisted to file and survives process restarts
-- [ ] **PERS-03**: `_ended_games` is persisted to file and survives process restarts
+- [x] **PERS-02**: `_order_log` is persisted to file and survives process restarts
+- [x] **PERS-03**: `_ended_games` is persisted to file and survives process restarts
 
 ### Validation
 
@@ -51,8 +51,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-01 | Phase 8 | Pending |
 | PIPE-02 | Phase 8 | Pending |
 | PERS-01 | Phase 8 | Pending |
-| PERS-02 | Phase 7 | Pending |
-| PERS-03 | Phase 7 | Pending |
+| PERS-02 | Phase 7 | Complete |
+| PERS-03 | Phase 7 | Complete |
 | VALID-01 | Phase 9 | Pending |
 | VALID-02 | Phase 9 | Pending |
 | VALID-03 | Phase 9 | Pending |
