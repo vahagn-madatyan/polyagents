@@ -1070,18 +1070,15 @@ class TestWalletRefreshWiring:
         assert mocks["budget"].can_spend_sports.call_args[0][1] == 900.0
 
     def test_slow_path_refresh_uses_none_polymarket_in_dry_run(self, monkeypatch):
-        from agents.application.ingame_trader import InGameTrader
-
         monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
         mocks = _make_mocks()
+        mocks["polymarket"] = None
         mocks["budget"].refresh_wallet_balance.return_value = 500.0
-        trader = InGameTrader(
-            budget_coordinator=mocks["budget"],
-            data_connector=mocks["data_connector"],
-            executor=mocks["executor"],
-            cache=mocks["cache"],
+
+        trader, mocks = _make_trader(
             dry_run=True,
-            polymarket=None,
+            mocks=mocks,
+            monkeypatch=monkeypatch,
             wallet_balance=500.0,
         )
 
@@ -1121,6 +1118,7 @@ class TestWalletBalance:
         monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
         monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
         mocks = _make_mocks()
+        mocks["budget"].refresh_wallet_balance.return_value = 500.0
         trader = InGameTrader(
             budget_coordinator=mocks["budget"],
             data_connector=mocks["data_connector"],
@@ -1149,6 +1147,7 @@ class TestWalletBalance:
         monkeypatch.setenv("SPORTS_INGAME_COOLDOWN_SECONDS", "0")
         monkeypatch.setenv("SPORTS_INGAME_MIN_CONFIDENCE_GAP", "0.10")
         mocks = _make_mocks()
+        mocks["budget"].refresh_wallet_balance.return_value = 500.0
         trader = InGameTrader(
             budget_coordinator=mocks["budget"],
             data_connector=mocks["data_connector"],
