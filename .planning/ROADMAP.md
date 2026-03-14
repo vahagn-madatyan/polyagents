@@ -54,10 +54,10 @@ Plans:
   1. Pre-game analysis calls `detect_value_bet()` and trades are only placed when a value opportunity is flagged
   2. In-game fast-path calls `detect_value_bet()` and skips execution when no odds divergence is detected
   3. `wallet_balance` is refreshed at runtime (not just at startup) so budget calculations reflect current USDC holdings
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 08-01-PLAN.md — Pre-game value bet filter, wallet refresh method, and cache augmentation
+- [x] 08-01-PLAN.md — Pre-game value bet filter, wallet refresh method, and cache augmentation
 - [ ] 08-02-PLAN.md — In-game value bet filter and wallet refresh wiring
 
 ### Phase 9: Live Validation
@@ -81,5 +81,5 @@ Plans:
 | 5. Critical Integration Fixes | v1.0 | 1/1 | Complete | 2026-03-09 |
 | 6. Safety & Resilience Wiring | v1.0 | 2/2 | Complete | 2026-03-11 |
 | 7. Code Quality and State Persistence | v1.1 | 2/2 | Complete | 2026-03-13 |
-| 8. Pipeline Integration | v1.1 | 0/2 | Not started | - |
+| 8. Pipeline Integration | v1.1 | 1/2 | In Progress | - |
 | 9. Live Validation | v1.1 | 0/TBD | Not started | - |

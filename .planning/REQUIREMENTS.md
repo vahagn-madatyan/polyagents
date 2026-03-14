@@ -9,12 +9,12 @@ Requirements for hardening release. Each maps to roadmap phases.
 
 ### Pipeline Integration
 
-- [ ] **PIPE-01**: Pre-game analysis calls `detect_value_bet()` to flag value opportunities before placing trades
+- [x] **PIPE-01**: Pre-game analysis calls `detect_value_bet()` to flag value opportunities before placing trades
 - [ ] **PIPE-02**: In-game fast-path calls `detect_value_bet()` to validate trades against external odds divergence
 
 ### Persistence
 
-- [ ] **PERS-01**: `wallet_balance` is periodically refreshed during pipeline execution (not just at startup)
+- [x] **PERS-01**: `wallet_balance` is periodically refreshed during pipeline execution (not just at startup)
 - [x] **PERS-02**: `_order_log` is persisted to file and survives process restarts
 - [x] **PERS-03**: `_ended_games` is persisted to file and survives process restarts
 
@@ -48,9 +48,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | Phase 8 | Pending |
+| PIPE-01 | Phase 8 | Complete |
 | PIPE-02 | Phase 8 | Pending |
-| PERS-01 | Phase 8 | Pending |
+| PERS-01 | Phase 8 | Complete |
 | PERS-02 | Phase 7 | Complete |
 | PERS-03 | Phase 7 | Complete |
 | VALID-01 | Phase 9 | Pending |
