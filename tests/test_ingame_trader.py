@@ -14,6 +14,8 @@ Tests cover:
 
 from __future__ import annotations
 
+import os
+import tempfile
 import threading
 import time
 from unittest.mock import MagicMock, call, patch
@@ -142,11 +144,22 @@ def _make_mocks():
 def _make_trader(
     dry_run=True, mocks=None, monkeypatch=None, wallet_balance=0.0, **env_overrides
 ):
-    """Build an InGameTrader with mocked dependencies."""
+    """Build an InGameTrader with mocked dependencies.
+
+    Always uses isolated temp paths for persistence files so tests
+    don't cross-contaminate each other or load stale state from /tmp.
+    """
     from agents.application.ingame_trader import InGameTrader
 
     if mocks is None:
         mocks = _make_mocks()
+
+    # Isolate persistence paths to a fresh temp dir for every test instance
+    _tmpdir = tempfile.mkdtemp(prefix="ingame_trader_test_")
+    _set_env = monkeypatch.setenv if monkeypatch is not None else os.environ.__setitem__
+    _set_env("SPORTS_ORDER_LOG_PATH", os.path.join(_tmpdir, "order_log.json"))
+    _set_env("SPORTS_ENDED_GAMES_PATH", os.path.join(_tmpdir, "ended_games.json"))
+    _set_env("SPORTS_STATE_LOCK_PATH", os.path.join(_tmpdir, "state.lock"))
 
     if monkeypatch is not None:
         for key, val in env_overrides.items():

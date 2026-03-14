@@ -9,10 +9,14 @@ Does NOT import Executor, Chroma, or Gamma to avoid the heavy dependency chain.
 
 from __future__ import annotations
 
+import json
 import os
+import tempfile
 import threading
 import time
 from typing import TYPE_CHECKING, Optional
+
+from filelock import FileLock
 
 from agents.connectors.sports_ws import (
     should_halt_trading,
@@ -52,6 +56,41 @@ _DEFAULT_FINAL_PERIODS: set[str] = {"OT", "Q4", "P3", "2H", "ET"}
 
 # Default in-game trade amount (fraction of sport cap) for fast-path
 _INGAME_SIZE_FRACTION = 0.05
+
+
+# ---------------------------------------------------------------------------
+# Persistence helpers (module-level, shared by InGameTrader methods)
+# ---------------------------------------------------------------------------
+
+
+def _write_atomic(path: str, data) -> None:
+    """Write JSON atomically: write to temp file, then rename."""
+    dir_ = os.path.dirname(path) or "."
+    fd, tmp_path = tempfile.mkstemp(dir=dir_, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def _read_safe(path: str, default):
+    """Read JSON file, returning default on missing or corrupt file."""
+    if not os.path.exists(path):
+        return default
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        print(
+            f"[ingame_trader] warn=corrupt_state_file path={path} error={exc} — fresh start"
+        )
+        return default
 
 
 class InGameTrader:
@@ -100,9 +139,22 @@ class InGameTrader:
         self._prev_game_states: dict[int, SportGameState] = {}
         self._last_processed: dict[int, float] = {}
         self._slow_path_in_flight: set[int] = set()
-        self._order_log: dict[int, list[dict]] = {}
         self._game_exposure: dict[int, float] = {}
-        self._ended_games: set[int] = set()
+
+        # Persistence paths — configurable via env, defaults to /tmp
+        self._order_log_path = os.environ.get(
+            "SPORTS_ORDER_LOG_PATH", "/tmp/polyagents_order_log.json"
+        )
+        self._ended_games_path = os.environ.get(
+            "SPORTS_ENDED_GAMES_PATH", "/tmp/polyagents_ended_games.json"
+        )
+        self._state_lock_path = os.environ.get(
+            "SPORTS_STATE_LOCK_PATH", "/tmp/polyagents_ingame_state.lock"
+        )
+
+        # Reload persisted state (graceful on missing/corrupt)
+        self._order_log = self._load_order_log()
+        self._ended_games = self._load_ended_games()
 
     # ------------------------------------------------------------------
     # Public API
@@ -222,6 +274,7 @@ class InGameTrader:
         Called when current.ended transitions True or explicitly from external code.
         """
         self._ended_games.add(game_id)
+        self._persist_ended_games()
         print(
             f"[ingame_trader] event=handle_game_ended game_id={game_id} "
             f"cancelling_blackout_orders=true"
@@ -603,7 +656,7 @@ class InGameTrader:
         self._game_exposure[game_id] = self._game_exposure.get(game_id, 0.0) + amount
 
     def _log_order(self, game_id: int, order_id: str, market_id: str) -> None:
-        """Record placed order in _order_log (in-memory only)."""
+        """Record placed order in _order_log and persist to JSON file."""
         if game_id not in self._order_log:
             self._order_log[game_id] = []
         self._order_log[game_id].append(
@@ -613,6 +666,34 @@ class InGameTrader:
                 "market_id": market_id,
             }
         )
+        self._persist_order_log()
+
+    # ------------------------------------------------------------------
+    # State persistence
+    # ------------------------------------------------------------------
+
+    def _load_order_log(self) -> dict[int, list[dict]]:
+        """Load order log from JSON file. JSON keys are strings — convert back to int."""
+        raw = _read_safe(self._order_log_path, {})
+        return {int(k): v for k, v in raw.items()}
+
+    def _load_ended_games(self) -> set[int]:
+        """Load ended games set from JSON array."""
+        raw = _read_safe(self._ended_games_path, [])
+        return set(int(x) for x in raw)
+
+    def _persist_order_log(self) -> None:
+        """Write _order_log to file atomically with filelock."""
+        lock = FileLock(self._state_lock_path)
+        with lock:
+            serializable = {str(k): v for k, v in self._order_log.items()}
+            _write_atomic(self._order_log_path, serializable)
+
+    def _persist_ended_games(self) -> None:
+        """Write _ended_games to file atomically with filelock."""
+        lock = FileLock(self._state_lock_path)
+        with lock:
+            _write_atomic(self._ended_games_path, list(self._ended_games))
 
     # ------------------------------------------------------------------
     # Event classification
