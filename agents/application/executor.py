@@ -14,6 +14,7 @@ from agents.application.prompts import Prompter
 from agents.connectors.chroma import PolymarketRAG as Chroma
 from agents.polymarket.gamma import GammaMarketClient as Gamma
 from agents.polymarket.polymarket import Polymarket
+from agents.utils.env import _env_bool, _env_float, _env_int
 from agents.utils.objects import CandidateTrade, SimpleEvent, SimpleMarket
 
 
@@ -27,33 +28,6 @@ def retain_keys(data, keys_to_retain):
     if isinstance(data, list):
         return [retain_keys(item, keys_to_retain) for item in data]
     return data
-
-
-def _env_bool(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return str(value).strip().lower() in ("1", "true", "yes", "on")
-
-
-def _env_int(name: str, default: int) -> int:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _env_float(name: str, default: float) -> float:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:

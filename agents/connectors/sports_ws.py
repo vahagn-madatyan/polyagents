@@ -24,18 +24,8 @@ from typing import Optional
 
 import websocket
 
+from agents.utils.env import _env_int
 from agents.utils.objects import SportGameState
-
-
-def _env_int(name: str, default: int) -> int:
-    """Read an integer from environment variable, returning default on missing/invalid."""
-    value = os.getenv(name)
-    if value is None:
-        return default
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
 
 
 # ---------------------------------------------------------------------------

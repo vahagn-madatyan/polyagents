@@ -13,20 +13,7 @@ from typing import Optional
 
 from filelock import FileLock
 
-
-# ---------------------------------------------------------------------------
-# Inline env helper (same pattern as sports_ws.py — avoid heavy imports)
-# ---------------------------------------------------------------------------
-
-
-def _env_int(key: str, default: int) -> int:
-    val = os.environ.get(key)
-    if val is None:
-        return default
-    try:
-        return int(val)
-    except (TypeError, ValueError):
-        return default
+from agents.utils.env import _env_int
 
 
 class PregameCache:

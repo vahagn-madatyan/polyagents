@@ -27,36 +27,7 @@ from agents.application.sports_trader import SportsTrader
 from agents.connectors.sports_data import SportsDataConnector
 from agents.connectors.sports_ws import SportsWSConnector
 from agents.polymarket.gamma import GammaMarketClient
-
-
-def _env_bool(key: str, default: bool = False) -> bool:
-    """Read a boolean env var. Accepts 'true'/'false' (case-insensitive)."""
-    val = os.environ.get(key)
-    if val is None:
-        return default
-    return val.strip().lower() == "true"
-
-
-def _env_float(key: str, default: float) -> float:
-    """Read a float env var with a default."""
-    val = os.environ.get(key)
-    if val is None:
-        return default
-    try:
-        return float(val)
-    except ValueError:
-        return default
-
-
-def _env_int(key: str, default: int) -> int:
-    """Read an int env var with a default."""
-    val = os.environ.get(key)
-    if val is None:
-        return default
-    try:
-        return int(val)
-    except ValueError:
-        return default
+from agents.utils.env import _env_bool, _env_float, _env_int
 
 
 def _resolve_dry_run() -> bool:

@@ -49,26 +49,7 @@ class SessionBudgetManager:
         )
 
 
-def _env_float(key: str, default: float) -> float:
-    """Read a float env var with a default."""
-    val = os.environ.get(key)
-    if val is None:
-        return default
-    try:
-        return float(val)
-    except ValueError:
-        return default
-
-
-def _env_int(key: str, default: int) -> int:
-    """Read an int env var with a default."""
-    val = os.environ.get(key)
-    if val is None:
-        return default
-    try:
-        return int(val)
-    except ValueError:
-        return default
+from agents.utils.env import _env_float, _env_int
 
 
 class BudgetCoordinator:

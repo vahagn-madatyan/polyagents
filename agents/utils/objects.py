@@ -104,7 +104,6 @@ class PolymarketEvent(BaseModel):
     liquidityClob: Optional[float] = None
     _sync: Optional[bool] = None
     commentCount: Optional[int] = None
-    # markets: list[str, 'Market'] # forward reference Market defined below - TODO: double check this works as intended
     markets: Optional[list[Market]] = None
     tags: Optional[list[Tag]] = None
     cyom: Optional[bool] = None

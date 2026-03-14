@@ -12,18 +12,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 if TYPE_CHECKING:
     from agents.utils.objects import SportGameState
 
-
-# ---------------------------------------------------------------------------
-# Inline env helpers (same pattern as sports_ws.py — avoid heavy executor imports)
-# ---------------------------------------------------------------------------
-
-
-def _env_int(key: str, default: int) -> int:
-    return int(os.environ.get(key, str(default)))
-
-
-def _env_float(key: str, default: float) -> float:
-    return float(os.environ.get(key, str(default)))
+from agents.utils.env import _env_float, _env_int
 
 
 def _env_str(key: str, default: str = "") -> str:
