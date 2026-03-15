@@ -68,7 +68,11 @@ Plans:
   1. Slug normalization produces a valid Polymarket slug for all 9 sport types when tested against live Polymarket market data
   2. Debounce thresholds are configurable per sport type (e.g., NFL uses a different threshold than NBA) and apply correctly to score-change events
   3. The system does not exceed 60 CLOB orders/min when both sports and general pipelines are running concurrently under representative load
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Per-sport cooldown configuration and order-rate counter instrumentation
+- [ ] 09-02-PLAN.md — Live slug validation and concurrent rate limit validation scripts
 
 ## Progress
 
@@ -82,4 +86,4 @@ Plans:
 | 6. Safety & Resilience Wiring | v1.0 | 2/2 | Complete | 2026-03-11 |
 | 7. Code Quality and State Persistence | v1.1 | 2/2 | Complete | 2026-03-13 |
 | 8. Pipeline Integration | v1.1 | 2/2 | Complete | 2026-03-14 |
-| 9. Live Validation | v1.1 | 0/TBD | Not started | - |
+| 9. Live Validation | v1.1 | 0/2 | Not started | - |
