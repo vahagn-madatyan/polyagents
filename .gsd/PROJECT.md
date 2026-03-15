@@ -34,11 +34,19 @@ Autonomously identify and execute profitable sports trades by combining real-tim
 
 - (none — all v1.1 features shipped)
 
-## Completed Milestone: v1.1 Hardening
+## Completed Milestone: M001 — Sports Mode Pipeline (v1.0 + v1.1)
 
-**Goal:** Resolve all carried-forward tech debt, validate robustness under live conditions, and clean up code quality issues from v1.0.
+**Goal:** Build an autonomous sports mode trading pipeline (v1.0) then resolve all carried-forward tech debt and validate robustness (v1.1).
 
-**Shipped features (S01–S09):**
+**Shipped — v1.0 Core Pipeline (S01–S06):**
+- ✓ Sports WebSocket client with reconnection and game state normalization
+- ✓ Slug-based market discovery via Polymarket Gamma API across all 9 sport types
+- ✓ Cross-process BudgetCoordinator with filelock for USDC allocation
+- ✓ Two-stage LLM analysis (blind + market-aware) with sports-specific prompts and external stats
+- ✓ Live in-game trading with fast-path/slow-path routing on score changes
+- ✓ Cross-component integration fixes and safety/resilience wiring
+
+**Shipped — v1.1 Hardening (S07–S09):**
 - ✓ Wire `detect_value_bet()` into the trading pipeline as a filter/signal
 - ✓ Live-refresh `wallet_balance` instead of stale startup snapshot
 - ✓ Persist `_order_log` and `_ended_games` to survive process restarts
@@ -47,6 +55,8 @@ Autonomously identify and execute profitable sports trades by combining real-tim
 - ✓ Validate CLOB rate limiting under concurrent sports + general pipeline load
 - ✓ Consolidate inline env helper duplication across modules
 - ✓ Resolve pre-existing TODO in `agents/utils/objects.py:107`
+
+**Verification:** 437 tests passing, 10/10 requirements validated, 0 active requirements remaining.
 
 ### Out of Scope
 
@@ -64,7 +74,7 @@ Autonomously identify and execute profitable sports trades by combining real-tim
 - **Codebase:** ~8,976 new Python LOC across 19 files; total project ~306k LOC Python
 - **Tech stack:** Python 3.9, LangChain, OpenAI, Chroma, py-clob-client, FastAPI, websocket-client, httpx, cachetools, tenacity, filelock
 - **Architecture:** Separate sports pipeline (`agents/sports.py`) runs alongside general pipeline; cross-process BudgetCoordinator with filelock for USDC allocation; SportsWSConnector streams game state; SportsTrader handles pre-game; InGameTrader handles live in-game
-- **Known tech debt:** All v1.0 tech debt resolved in v1.1 (S01–S09)
+- **Known tech debt:** All v1.0 tech debt resolved in v1.1 (S01–S09). 3 legacy general-pipeline test files have missing deps (newsapi, langchain_community) — pre-dates M001
 
 ## Constraints
 
@@ -89,4 +99,4 @@ Autonomously identify and execute profitable sports trades by combining real-tim
 | Inline env helpers per module | Avoids heavy executor.py import chain (langchain/openai deps) in lightweight modules | ✓ Resolved — centralized in agents/utils/env.py (S07) |
 
 ---
-*Last updated: 2026-03-15 after v1.1 milestone complete (S01–S09)*
+*Last updated: 2026-03-15 — M001 milestone complete (9 slices, 10 requirements validated, 437 tests)*
