@@ -4,3 +4,4 @@ COPY . /home
 WORKDIR /home
 
 RUN pip3 install -r requirements.txt
+RUN export PYTHONPATH="."

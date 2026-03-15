@@ -1,0 +1,101 @@
+---
+title: Polymarket/agents Extended — System Architecture
+---
+graph TB
+    subgraph EC2["AWS EC2 c6a.xlarge · eu-west-1 (Ireland) · $45/mo spot"]
+        subgraph Base["POLYMARKET/AGENTS (Forked, Python)"]
+            Gamma[GammaMarketClient]
+            CLOB[py-clob-client CLOB Trading]
+            Chroma[ChromaDB RAG]
+            Super[Superforecaster Prompting]
+            LGraph[LangGraph Orchestration]
+        end
+
+        subgraph Extensions["EXTENSIONS (New Capabilities)"]
+            subgraph LLMGateway["LiteLLM Gateway"]
+                direction TB
+                Primary["PRIMARY: AWS Bedrock\nClaude Haiku · Sonnet\nLlama 3.3 70B"]
+                Fallback["FALLBACK: OpenAI\nDeepSeek · Groq"]
+                Local["LOCAL: Ollama\nQwen3-8B · Mistral-7B"]
+            end
+
+            subgraph DataPipe["7 Data Collectors"]
+                GDELT[GDELT News]
+                FRED[FRED Economic]
+                Reddit[Reddit/PRAW]
+                FTE[FiveThirtyEight]
+                Dune[Dune On-Chain]
+                Tavily[Tavily Search]
+                WS[Polymarket WebSocket]
+            end
+
+            subgraph Filtering["Signal Filtering"]
+                Edge[Edge Detector]
+                Liq[Liquidity Filter]
+                Time[Time Filter]
+                Corr[Correlation Guard]
+                Conf[Confidence Gate]
+            end
+
+            subgraph Risk["Risk & Sizing"]
+                Kelly[Kelly Criterion 25%]
+                RiskEng[Portfolio Risk Engine]
+                Paper[Paper Trade Gate]
+                Breaker[Circuit Breaker 5%]
+            end
+
+            subgraph Monitor["Monitoring + API"]
+                TG[Telegram Alerts]
+                API[FastAPI REST API]
+                Cal[Calibration Brier]
+                S3Log[S3 Training Logger]
+            end
+        end
+
+        subgraph Docker["Docker Compose"]
+            Ollama[Ollama Models]
+            ChromaDB[ChromaDB]
+            PG[(PostgreSQL 16)]
+            Redis[(Redis)]
+        end
+
+        subgraph Storage["AWS Storage"]
+            S3[S3 eu-west-1\nTraining JSONL\nSnapshots]
+            GPU[Future: g4dn.xlarge\nQLoRA Fine-Tuning]
+        end
+    end
+
+    subgraph Vercel["VERCEL (Global Edge)"]
+        subgraph Dashboard["Next.js Dashboard (TypeScript)"]
+            Portfolio[Portfolio Page]
+            Trades[Trade History]
+            Signals[Signal Log]
+            CalPage[Calibration Curves]
+            Markets[Market Scanner]
+            LLMMetrics[LLM Cost Metrics]
+            Config[Config Panel]
+            Auth[Supabase Auth]
+        end
+    end
+
+    Base --> Extensions
+    DataPipe --> Chroma
+    LLMGateway --> Filtering
+    Filtering --> Risk
+    Risk --> CLOB
+    Monitor --> S3
+    API -->|HTTPS| Dashboard
+    PG -->|shared state| API
+
+    classDef primary fill:#f97316,stroke:#f97316,color:#fff
+    classDef bedrock fill:#ff6b35,stroke:#ff6b35,color:#fff
+    classDef keep fill:#22c55e,stroke:#22c55e,color:#fff
+    classDef new fill:#3b82f6,stroke:#3b82f6,color:#fff
+    classDef dashboard fill:#06b6d4,stroke:#06b6d4,color:#fff
+    classDef storage fill:#8b5cf6,stroke:#8b5cf6,color:#fff
+
+    class Primary,Fallback,Local bedrock
+    class Gamma,CLOB,Chroma,Super,LGraph keep
+    class Edge,Liq,Time,Corr,Conf,Kelly,RiskEng,Paper,Breaker new
+    class Portfolio,Trades,Signals,CalPage,Markets,LLMMetrics,Config,Auth dashboard
+    class S3,GPU,PG,Redis storage

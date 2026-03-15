@@ -1,6 +1,26 @@
 from typing import List
 from datetime import datetime
 
+from langchain_core.messages import HumanMessage, SystemMessage
+
+
+def _format_h2h(h2h_list: list, home: str, away: str) -> str:
+    """Format head-to-head records into readable text for LLM prompt injection."""
+    if not h2h_list:
+        return "No historical head-to-head records available."
+    lines = [f"Head-to-Head History ({home} vs {away}):"]
+    for game in h2h_list[:5]:  # Limit to 5 most recent
+        date = game.get("date", "unknown date")
+        home_score = game.get("home_score", "?")
+        away_score = game.get("away_score", "?")
+        winner = game.get("winner", "unknown")
+        home_name = game.get("home_team", home)
+        away_name = game.get("away_team", away)
+        lines.append(
+            f"  {date}: {home_name} {home_score} - {away_score} {away_name} (winner: {winner})"
+        )
+    return "\n".join(lines)
+
 
 class Prompter:
 
@@ -105,6 +125,8 @@ class Prompter:
             + f"""
         
         Filter these markets for the ones you will be best at trading on profitably.
+        Prefer markets with meaningful volume and liquidity.
+        Avoid dead/illiquid markets and avoid outcomes priced at extreme tails (near 0 or near 1) unless justified by clear edge.
 
         """
         )
@@ -152,38 +174,31 @@ class Prompter:
         return (
             self.polymarket_analyst_api()
             + f"""
-        
-                Imagine yourself as the top trader on Polymarket, dominating the world of information markets with your keen insights and strategic acumen. You have an extraordinary ability to analyze and interpret data from diverse sources, turning complex information into profitable trading opportunities.
-                You excel in predicting the outcomes of global events, from political elections to economic developments, using a combination of data analysis and intuition. Your deep understanding of probability and statistics allows you to assess market sentiment and make informed decisions quickly.
-                Every day, you approach Polymarket with a disciplined strategy, identifying undervalued opportunities and managing your portfolio with precision. You are adept at evaluating the credibility of information and filtering out noise, ensuring that your trades are based on reliable data.
-                Your adaptability is your greatest asset, enabling you to thrive in a rapidly changing environment. You leverage cutting-edge technology and tools to gain an edge over other traders, constantly seeking innovative ways to enhance your strategies.
-                In your journey on Polymarket, you are committed to continuous learning, staying informed about the latest trends and developments in various sectors. Your emotional intelligence empowers you to remain composed under pressure, making rational decisions even when the stakes are high.
-                Visualize yourself consistently achieving outstanding returns, earning recognition as the top trader on Polymarket. You inspire others with your success, setting new standards of excellence in the world of information markets.
+        You made the following prediction for a market:
+        {prediction}
 
-        """
-            + f"""
-        
-        You made the following prediction for a market: {prediction}
+        The current outcomes are {outcomes}.
+        The current outcome prices are {outcome_prices}.
 
-        The current outcomes ${outcomes} prices are: ${outcome_prices}
+        Return JSON only (no markdown, no prose outside JSON) using this schema:
+        {{
+          "probabilities": [
+            {{"outcome": "<string>", "likelihood": <float between 0 and 1>}}
+          ],
+          "selected_outcome": "<string outcome from outcomes>",
+          "side": "<BUY or SELL>",
+          "price": <float between 0 and 1>,
+          "size_fraction": <float between 0 and 1>,
+          "rationale": "<short concise reasoning summary>",
+          "risk_factors": ["<short risk factor 1>", "<short risk factor 2>"],
+          "counter_case": "<short concise opposing view>"
+        }}
 
-        Given your prediction, respond with a genius trade in the format:
-        `
-            price:'price_on_the_orderbook',
-            size:'percentage_of_total_funds',
-            side: BUY or SELL,
-        `
-
-        Your trade should approximate price using the likelihood in your prediction.
-
-        Example response:
-
-        RESPONSE```
-            price:0.5,
-            size:0.1,
-            side:BUY,
-        ```
-        
+        Constraints:
+        - Keep rationale and counter_case concise (1-2 sentences each).
+        - Provide at most 3 risk_factors.
+        - Probabilities should correspond to listed outcomes and sum close to 1.
+        - Do not output hidden chain-of-thought. Output only concise summaries.
         """
         )
 
@@ -223,16 +238,68 @@ class Prompter:
         
         """
 
+    def crypto_price_analyst(
+        self,
+        symbol: str,
+        current_price: float,
+        target_price: float,
+        direction: str,
+        momentum_1m: float,
+        momentum_5m: float,
+        momentum_15m: float,
+        time_remaining_hours: float,
+        market_yes_price: float,
+        market_no_price: float,
+    ) -> str:
+        return (
+            self.polymarket_analyst_api()
+            + f"""
+        You are analyzing a crypto price prediction market.
+
+        Asset: {symbol}
+        Current live price: ${current_price:,.2f}
+        Market question: Will {symbol} be {direction} ${target_price:,.2f}?
+        Time remaining: {time_remaining_hours:.1f} hours
+
+        Live price momentum:
+        - 1-minute momentum: {momentum_1m:+.4f} ({momentum_1m*100:+.2f}%)
+        - 5-minute momentum: {momentum_5m:+.4f} ({momentum_5m*100:+.2f}%)
+        - 15-minute momentum: {momentum_15m:+.4f} ({momentum_15m*100:+.2f}%)
+
+        Current market odds:
+        - Yes price: {market_yes_price:.4f} (implied {market_yes_price*100:.1f}% probability)
+        - No price: {market_no_price:.4f} (implied {market_no_price*100:.1f}% probability)
+
+        Distance to target: {abs(current_price - target_price) / current_price * 100:.2f}% {'above' if current_price > target_price else 'below'} target
+
+        Based on the live price data, momentum, and market odds, is this market mispriced?
+        Return JSON only (no markdown, no prose outside JSON) using this schema:
+        {{
+          "probabilities": [
+            {{"outcome": "Yes", "likelihood": <float between 0 and 1>}},
+            {{"outcome": "No", "likelihood": <float between 0 and 1>}}
+          ],
+          "selected_outcome": "<Yes or No>",
+          "side": "<BUY or SELL>",
+          "price": <float between 0 and 1>,
+          "size_fraction": <float between 0 and 1>,
+          "rationale": "<short concise reasoning based on price data and momentum>",
+          "risk_factors": ["<risk 1>", "<risk 2>"],
+          "counter_case": "<short opposing view>"
+        }}
+        """
+        )
+
     def create_new_market(self, filtered_markets: str) -> str:
         return f"""
         {filtered_markets}
-        
+
         Invent an information market similar to these markets that ends in the future,
         at least 6 months after today, which is: {datetime.today().strftime('%Y-%m-%d')},
         so this date plus 6 months at least.
 
         Output your format in:
-        
+
         Question: "..."?
         Outcomes: A or B
 
@@ -241,5 +308,140 @@ class Prompter:
 
         Question: "Will Kamala win"
         Outcomes: Yes or No
-        
+
         """
+
+    def sports_superforecaster(self, game_state, game_context: dict) -> list:
+        """Blind probability estimate for a sports game outcome.
+
+        Returns [SystemMessage, HumanMessage]. Does NOT include Polymarket prices —
+        this is a pure statistical estimate based on team data alone (per user decision).
+        """
+        league = game_context.get("league", getattr(game_state, "league", ""))
+        home_team = game_context.get("home_team", getattr(game_state, "home_team", ""))
+        away_team = game_context.get("away_team", getattr(game_state, "away_team", ""))
+
+        home_stats = game_context.get("home_stats") or {}
+        away_stats = game_context.get("away_stats") or {}
+        h2h_list = game_context.get("head_to_head") or []
+        external_odds = game_context.get("external_odds") or {}
+
+        # Format team stats
+        def _fmt_stats(team: str, stats: dict) -> str:
+            if not stats:
+                return f"{team}: Stats unavailable"
+            wins = stats.get("wins", "N/A")
+            losses = stats.get("losses", "N/A")
+            win_rate = stats.get("win_rate", "N/A")
+            form = stats.get("recent_form", "N/A")
+            if isinstance(win_rate, float):
+                win_rate = f"{win_rate:.3f}"
+            return (
+                f"{team}: wins={wins}, losses={losses}, win_rate={win_rate}, "
+                f"recent_form={form}"
+            )
+
+        home_stats_text = _fmt_stats(home_team, home_stats)
+        away_stats_text = _fmt_stats(away_team, away_stats)
+        h2h_text = _format_h2h(h2h_list, home_team, away_team)
+
+        # External bookmaker odds (implied probabilities only — no Polymarket prices)
+        if external_odds and external_odds.get("implied_home_prob") is not None:
+            implied_home = external_odds["implied_home_prob"]
+            implied_away = external_odds.get("implied_away_prob", 1.0 - implied_home)
+            source = external_odds.get("source_bookmaker", "bookmaker")
+            odds_text = (
+                f"External Bookmaker Odds ({source}):\n"
+                f"  Implied home win probability: {implied_home:.3f}\n"
+                f"  Implied away win probability: {implied_away:.3f}"
+            )
+        else:
+            odds_text = "External bookmaker odds: unavailable"
+
+        system_content = (
+            f"You are an expert sports betting analyst with deep knowledge of "
+            f"{league.upper()} team performance, historical trends, and statistical modeling. "
+            f"Your job is to estimate the true probability of the home team winning this game "
+            f"based solely on factual data -- NOT market prices."
+        )
+
+        human_content = (
+            f"Game: {home_team} (home) vs {away_team} (away) — {league.upper()}\n\n"
+            f"Team Statistics:\n"
+            f"  {home_stats_text}\n"
+            f"  {away_stats_text}\n\n"
+            f"{h2h_text}\n\n"
+            f"{odds_text}\n\n"
+            f"Based on the data above, estimate the true probability that {home_team} wins. "
+            f"Think step by step. Provide your probability estimate as a float between 0 and 1."
+        )
+
+        return [
+            SystemMessage(content=system_content),
+            HumanMessage(content=human_content),
+        ]
+
+    def sports_trade_decision(
+        self,
+        prediction: str,
+        game_state,
+        game_context: dict,
+        outcomes: list,
+        outcome_prices: list,
+        polymarket_price: float,
+    ) -> list:
+        """Trade decision prompt that incorporates Polymarket prices and value-bet divergence.
+
+        Returns [SystemMessage, HumanMessage]. Includes divergence line only when
+        external_odds has implied_home_prob available.
+        """
+        external_odds = game_context.get("external_odds") or {}
+        implied_home_prob = external_odds.get("implied_home_prob")
+
+        # Value-bet divergence line (only when external odds provide implied prob)
+        if implied_home_prob is not None:
+            divergence = implied_home_prob - polymarket_price
+            divergence_line = (
+                f"\nValue-Bet Signal: External odds imply {implied_home_prob*100:.1f}% home win "
+                f"vs Polymarket's {polymarket_price*100:.1f}% (divergence: {divergence*100:+.1f}%)"
+            )
+        else:
+            divergence_line = ""
+
+        # Format outcome prices
+        prices_text = ", ".join(
+            f"{o}: {p:.4f}" for o, p in zip(outcomes, outcome_prices)
+        )
+
+        system_content = (
+            "You are an expert sports betting analyst. Make precise trade decisions based on "
+            "probability estimates versus market prices. Output JSON only."
+        )
+
+        human_content = (
+            f"Probability Analysis:\n{prediction}\n\n"
+            f"Current Polymarket Prices:\n{prices_text}{divergence_line}\n\n"
+            f"Return JSON only (no markdown, no prose outside JSON) using this schema:\n"
+            f"{{\n"
+            f'  "probabilities": [\n'
+            f'    {{"outcome": "<string>", "likelihood": <float between 0 and 1>}}\n'
+            f"  ],\n"
+            f'  "selected_outcome": "<string outcome from outcomes list>",\n'
+            f'  "side": "<BUY or SELL>",\n'
+            f'  "price": <float between 0 and 1>,\n'
+            f'  "size_fraction": <float between 0 and 1>,\n'
+            f'  "rationale": "<short concise reasoning summary>",\n'
+            f'  "risk_factors": ["<short risk factor 1>", "<short risk factor 2>"],\n'
+            f'  "counter_case": "<short concise opposing view>"\n'
+            f"}}\n\n"
+            f"Constraints:\n"
+            f"- Keep rationale and counter_case concise (1-2 sentences each).\n"
+            f"- Provide at most 3 risk_factors.\n"
+            f"- Probabilities should correspond to listed outcomes and sum close to 1.\n"
+            f"- Do not output hidden chain-of-thought. Output only concise summaries."
+        )
+
+        return [
+            SystemMessage(content=system_content),
+            HumanMessage(content=human_content),
+        ]

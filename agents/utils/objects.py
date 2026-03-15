@@ -1,6 +1,7 @@
 from __future__ import annotations
-from typing import Optional, Union
-from pydantic import BaseModel
+import time
+from typing import Any, Optional, Union
+from pydantic import BaseModel, Field
 
 
 class Trade(BaseModel):
@@ -37,11 +38,21 @@ class SimpleMarket(BaseModel):
     # orderPriceMinTickSize: float
     rewardsMinSize: float
     rewardsMaxSpread: float
-    # volume: Optional[float]
+    volume: Optional[float] = 0.0
+    volume24hr: Optional[float] = 0.0
+    volume_clob: Optional[float] = 0.0
+    volume24hr_clob: Optional[float] = 0.0
+    liquidity: Optional[float] = 0.0
+    liquidity_clob: Optional[float] = 0.0
     spread: float
     outcomes: str
     outcome_prices: str
     clob_token_ids: Optional[str]
+    category: Optional[str] = ""
+    tags: Optional[str] = ""
+    event_id: Optional[str] = ""
+    event_title: Optional[str] = ""
+    event_slug: Optional[str] = ""
 
 
 class ClobReward(BaseModel):
@@ -93,7 +104,6 @@ class PolymarketEvent(BaseModel):
     liquidityClob: Optional[float] = None
     _sync: Optional[bool] = None
     commentCount: Optional[int] = None
-    # markets: list[str, 'Market'] # forward reference Market defined below - TODO: double check this works as intended
     markets: Optional[list[Market]] = None
     tags: Optional[list[Tag]] = None
     cyom: Optional[bool] = None
@@ -226,3 +236,108 @@ class Article(BaseModel):
     urlToImage: Optional[str]
     publishedAt: Optional[str]
     content: Optional[str]
+
+
+class CandidateTrade(BaseModel):
+    market_id: int
+    question: str
+    category_bucket: str = "other"
+    outcomes: list[str] = Field(default_factory=list)
+    outcome_prices: list[float] = Field(default_factory=list)
+    token_ids: list[str] = Field(default_factory=list)
+    rag_score: Optional[float] = None
+    probabilities: list[dict[str, Any]] = Field(default_factory=list)
+    suggested_outcome: str = ""
+    parsed_side: str = ""
+    parsed_price: Optional[float] = None
+    parsed_size_fraction: Optional[float] = None
+    confidence_gap: float = 0.0
+    rationale: str = ""
+    risk_factors: list[str] = Field(default_factory=list)
+    counter_case: str = ""
+    allocation_fraction: float = 0.0
+    allocation_amount_usdc: float = 0.0
+    execution_status: str = "NOT_EXECUTED"
+    execution_response: Optional[Any] = None
+
+
+class SportGameState(BaseModel):
+    """Live game state from Polymarket sports WebSocket.
+
+    A single model covers all 9 supported sports (NFL, NBA, MLB, NHL, CFB,
+    CBB, soccer, esports, tennis) with optional sport-specific fields.
+    """
+
+    # Core identity
+    game_id: int
+    league: str  # nfl, nba, mlb, nhl, cfb, cbb, soccer, cs2, tennis, etc.
+    slug: str  # {league}-{team1}-{team2}-{date}
+    home_team: str
+    away_team: str
+
+    # Core state (always present)
+    status: str  # sport-specific status string (InProgress, finished, etc.)
+    score_raw: str  # raw string from WS e.g. "3-16" or "000-000|2-0|Bo3"
+    home_score: Optional[int] = None  # parsed from score_raw
+    away_score: Optional[int] = None  # parsed from score_raw
+    period: str  # "Q4", "1H", "End 5", "2/3", "Set 2", etc.
+    live: bool
+    ended: bool
+
+    # Optional fields
+    elapsed: Optional[str] = None  # time within period, sport-specific
+    finished_timestamp: Optional[str] = None  # ISO 8601 when ended=True
+
+    # Sport-specific extras
+    possession: Optional[str] = None  # NFL/CFB only — maps from WS "turn" field
+
+    # Lifecycle tracking
+    last_updated: float = Field(default_factory=time.monotonic)
+    stale: bool = False  # True when watchdog fires; cleared on next real data message
+
+
+class SportsMarketTag(BaseModel):
+    """Links a sports WebSocket game slug to a specific Polymarket market.
+
+    Produced by GammaMarketClient slug-lookup methods and consumed by the
+    trading pipeline to place orders on the correct CLOB token pair.
+    """
+
+    slug: str  # ws_slug that sourced this tag, e.g. "nfl-lac-buf-2025-01-26"
+    league: str  # sport league abbreviation, e.g. "nfl", "nba"
+    home_team: str  # home team abbreviation, e.g. "LAC"
+    away_team: str  # away team abbreviation, e.g. "BUF"
+    market_id: str  # Gamma market id (str form of int)
+    condition_id: str  # CLOB condition id (0x hex string)
+    token_id_yes: str  # CLOB token id for YES outcome
+    token_id_no: str  # CLOB token id for NO outcome
+    question: str  # market question text, e.g. "Will the Chargers win?"
+    outcome_prices: Optional[str] = None  # JSON-encoded prices e.g. "0.6,0.4"
+
+
+class SportsAnalysisCache(BaseModel):
+    """Persisted pre-game analysis entry produced by SportsExecutor.
+
+    Stored in PregameCache keyed by game_id for fast-path reuse during Phase 4.
+    """
+
+    game_id: int
+    league: str
+    home_team: str
+    away_team: str
+    timestamp: float
+    llm_home_win_prob: float
+    llm_away_win_prob: float
+    confidence_gap: float
+    selected_outcome: str
+    selected_side: str
+    size_fraction: float
+    rationale: str
+    risk_factors: list[str] = Field(default_factory=list)
+    counter_case: str = ""
+    polymarket_price_at_analysis: float
+    external_implied_prob: Optional[float] = None
+    trade_attempted: bool = False
+    trade_error: Optional[str] = None
+    superforecast_response: str = ""
+    trade_response: str = ""

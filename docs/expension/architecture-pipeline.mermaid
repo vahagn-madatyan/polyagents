@@ -1,0 +1,105 @@
+---
+title: 7-Stage Trading Pipeline
+---
+flowchart TD
+    Start([Every 4 Hours — systemd timer]) --> S1
+
+    subgraph S1["Stage 1: Collect Data"]
+        C1[GDELT News\n15-min tone scores]
+        C2[FRED Economic\ndaily series]
+        C3[Reddit Sentiment\nhourly scan]
+        C4[FiveThirtyEight\npolling data]
+        C5[Dune On-Chain\nwhale tracking]
+        C6[Polymarket WebSocket\nreal-time prices]
+        C7[Tavily Search\nbreaking news]
+    end
+
+    S1 --> S2
+
+    subgraph S2["Stage 2: Enrich & Build Context"]
+        Dedup[News Deduplicator\nTF-IDF similarity]
+        Sent[Sentiment Aggregator\nVADER + GDELT tone]
+        CB[Context Builder\nper-market dossiers]
+        RAG[RAG Competence Filter\nonly trade what we know]
+        Chroma[(ChromaDB\nvector store)]
+        Dedup --> CB
+        Sent --> CB
+        Chroma --> RAG
+        CB --> RAG
+    end
+
+    S2 --> S3
+
+    subgraph S3["Stage 3: AI Analysis — Multi-Agent Debate"]
+        Bull["🐂 Bull Agent\nOllama/Qwen3-14B\nargues YES with evidence"]
+        Bear["🐻 Bear Agent\nBedrock/Llama-3.3-70B\nargues NO with evidence"]
+        Agg["⚖️ Aggregator\nBedrock/Claude Haiku\nsynthesizes probability"]
+        SF["🎯 Superforecaster\nBedrock/Claude Haiku\nTetlock calibration"]
+        Bull --> Agg
+        Bear --> Agg
+        Agg --> SF
+    end
+
+    SF --> EdgeCheck{Edge > 15pp?}
+    EdgeCheck -->|Yes| Escalate["🚀 Escalate to\nBedrock/Claude Sonnet 4"]
+    EdgeCheck -->|No| S4
+    Escalate --> S4
+
+    subgraph S4["Stage 4: Signal Filtering (~80% rejected)"]
+        F1["Edge Detector\n|p_model - p_market| > threshold"]
+        F2["Liquidity Filter\n$5K min orderbook depth"]
+        F3["Time Filter\n24h < resolution < 6mo"]
+        F4["Correlation Guard\nmax 3 per category"]
+        F5["Confidence Gate\n≥7/10 AND ≥2/3 agree"]
+        F1 --> F2 --> F3 --> F4 --> F5
+    end
+
+    S4 --> PassCheck{Passed all\nfilters?}
+    PassCheck -->|No — ~80%| Reject["❌ Log signal\nrecord filter_reason\nstore in PostgreSQL"]
+    PassCheck -->|Yes — ~20%| S5
+
+    subgraph S5["Stage 5: Size & Validate"]
+        Kelly["Kelly Criterion\n25% fractional Kelly"]
+        RiskEng["Portfolio Risk Engine\nmax 10% single position\nmax 40% total exposure\n50% cash reserve"]
+        Breaker["Circuit Breaker\nstop if -5% daily loss"]
+        Kelly --> RiskEng --> Breaker
+    end
+
+    Breaker --> PaperCheck{Paper trade\ngate?}
+    PaperCheck -->|New strategy < 30 days| PaperTrade["📝 Paper Trade\nrecord but don't execute"]
+    PaperCheck -->|Approved strategy| S6
+
+    subgraph S6["Stage 6: Execute"]
+        Router["Smart Order Router\nsplit large orders\nslippage protection"]
+        Fill["WebSocket Fill Monitor\nreal-time confirmations"]
+        TG["📱 Telegram Alert\ntrade + reasoning"]
+        Router --> Fill --> TG
+    end
+
+    subgraph S7["Stage 7: Monitor (5-min timer)"]
+        Pos["Position Tracker\nlive portfolio state"]
+        ExitMgr["Exit Manager\nTP: edge < 2pp\nSL: -15%\nTime-based exits"]
+        Logger["S3 Training Logger\ncontext → prediction → outcome"]
+        PG[(PostgreSQL\ntrades + signals)]
+        Pos --> ExitMgr
+        ExitMgr --> PG
+        Logger --> S3[(S3 JSONL)]
+    end
+
+    S6 --> S7
+
+    classDef collect fill:#f97316,stroke:#ea580c,color:#fff
+    classDef enrich fill:#eab308,stroke:#ca8a04,color:#000
+    classDef debate fill:#8b5cf6,stroke:#7c3aed,color:#fff
+    classDef filter fill:#ef4444,stroke:#dc2626,color:#fff
+    classDef risk fill:#22c55e,stroke:#16a34a,color:#fff
+    classDef execute fill:#3b82f6,stroke:#2563eb,color:#fff
+    classDef monitor fill:#06b6d4,stroke:#0891b2,color:#fff
+
+    class C1,C2,C3,C4,C5,C6,C7 collect
+    class Dedup,Sent,CB,RAG enrich
+    class Bull,Bear,Agg,SF,Escalate debate
+    class F1,F2,F3,F4,F5 filter
+    class Kelly,RiskEng,Breaker risk
+    class Router,Fill,TG execute
+    class Pos,ExitMgr,Logger monitor
