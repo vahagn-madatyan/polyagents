@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "predikt"
-version = "0.1.1"
+version = "0.1.2"
 description = "Autonomous AI trading agent for Polymarket prediction markets. Sports, crypto, news, and general market pipelines."
 authors = [
     { name = "Vahagn Madatyan" },

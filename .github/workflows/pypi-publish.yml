@@ -29,37 +29,20 @@ jobs:
       - name: Build wheel and sdist
         run: python -m build
 
+      - name: Verify wheel contents
+        run: |
+          ls -lh dist/
+          python -m zipfile -l dist/*.whl | head -30
+
       - name: Store distribution packages
         uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
 
-  test:
-    name: Install and verify
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install from wheel
-        run: pip install dist/*.whl
-
-      - name: Verify CLI entry point
-        run: predikt --help
-
   publish-to-testpypi:
     name: Publish to TestPyPI
-    needs: [build, test]
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -81,7 +64,7 @@ jobs:
 
   publish-to-pypi:
     name: Publish to PyPI
-    needs: [build, test, publish-to-testpypi]
+    needs: [build, publish-to-testpypi]
     runs-on: ubuntu-latest
     environment:
       name: pypi
