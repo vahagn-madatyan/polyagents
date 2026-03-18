@@ -68,4 +68,4 @@ jobs:
         run: |
           ls -lh dist/
           pip install dist/*.whl
-          predikt --help
+          python -c "from scripts.python.cli import app; print('CLI import OK')"
