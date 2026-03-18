@@ -23,5 +23,5 @@
   > After this: Consolidate duplicated env helper functions into a single shared module and resolve the stale TODO in objects.
 - [x] **S08: Pipeline Integration** `risk:medium` `depends:[S07]`
   > After this: Wire `detect_value_bet()` into the pre-game trading pipeline as an early filter (before LLM analysis), add `refresh_wallet_balance()` to BudgetCoordinator, and augment the cache entry with `implied_home_prob` for downstream in-game fast-path use.
-- [x] **S09: Live Validation** `risk:medium` `depends:[S08]`
+- [ ] **S09: Live Validation** `risk:medium` `depends:[S08]`
   > After this: Add per-sport cooldown configuration and order-rate instrumentation to InGameTrader.

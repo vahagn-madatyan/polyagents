@@ -1,3 +1,95 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "predikt"
+version = "0.1.0"
+description = "Autonomous AI trading agent for Polymarket prediction markets. Sports, crypto, news, and general market pipelines."
+authors = [
+    { name = "Vahagn Madatyan" },
+]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+keywords = [
+    "polymarket",
+    "prediction-markets",
+    "trading-bot",
+    "ai-agent",
+    "sports-betting",
+    "crypto",
+    "autonomous-trading",
+    "langchain",
+    "openai",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "python-dotenv>=1.0",
+    "openai>=1.30",
+    "langchain>=0.2",
+    "langchain-openai>=0.1",
+    "langchain-chroma>=0.1",
+    "langchain-community>=0.2",
+    "langchain-text-splitters>=0.2",
+    "langgraph>=0.1",
+    "langsmith>=0.1",
+    "chromadb>=0.5",
+    "py-clob-client>=0.17",
+    "fastapi>=0.111",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+    "websocket-client>=1.8",
+    "web3>=6.11",
+    "cachetools>=5.4",
+    "tenacity>=8.5",
+    "filelock>=3.15",
+    "requests>=2.32",
+    "numpy>=1.26",
+    "pydantic>=2.8",
+    "typer>=0.12",
+    "rich>=13.7",
+    "devtools>=0.12",
+    "tiktoken>=0.7",
+    "PyYAML>=6.0",
+    "tavily-python>=0.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.21",
+    "black>=24.0",
+    "build",
+]
+
+[project.urls]
+Homepage = "https://github.com/vahagn-madatyan/predikt"
+Documentation = "https://github.com/vahagn-madatyan/predikt#readme"
+Repository = "https://github.com/vahagn-madatyan/predikt"
+Issues = "https://github.com/vahagn-madatyan/predikt/issues"
+
+[project.scripts]
+predikt = "scripts.python.cli:app"
+predikt-sports = "agents.sports:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agents*", "scripts*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

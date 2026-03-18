@@ -1,7 +1,7 @@
 """
 Sports pipeline entry point.
 
-Run as: python -m agents.sports
+Run as: predikt-sports (or python -m agents.sports)
 
 This module wires together all Phase 2, Phase 3, and Phase 4 components:
   - SportsWSConnector: live game state via WebSocket

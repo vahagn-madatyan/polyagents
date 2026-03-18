@@ -11,7 +11,3 @@
 - "Fast-path uses cached implied_home_prob and skips the value-bet check entirely when that value is missing, preserving low-latency execution."
 - "Slow-path runs detect_value_bet() immediately after get_game_context() and allows malformed or absent external odds to pass through rather than block trading."
 - "Both in-game budget gates refresh self._wallet_balance via BudgetCoordinator before can_spend_sports() so cooldown-managed live balance is reused across calls."
-- "Per-sport cooldowns keyed by _FINAL_PERIODS league names (lowercase); _should_process and _is_in_cooldown accept optional league param — callers pass current.league."
-- "Order-rate counter uses in-memory timestamp list (not persisted); pruned lazily on each access; 60s window matches VALID-03 compliance target."
-- "Validation scripts are standalone in scripts/python/, import from project root via sys.path; emit JSON to stdout and progress to stderr; --output flag for file persistence."
-- "Pending sports (no live events) tracked as 'pending' not 'fail' in slug validation — overall_status reflects this distinction to avoid false negatives during off-season."

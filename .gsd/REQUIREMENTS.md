@@ -2,34 +2,34 @@
 
 ## Active
 
-## Validated
-
 ### VALID-01 — Slug normalization produces consistent slugs across all 9 sport types with live Polymarket data
 
-- Status: validated
+- Status: active
 - Class: core-capability
 - Source: inferred
-- Primary Slice: S09
+- Primary Slice: none yet
 
-Live Gamma API validation confirms slug resolution for active leagues (NBA 5 slugs, NHL 1 slug); off-season leagues report "pending" (structural, not failure). validate_slugs.py produces structured JSON evidence.
+Slug normalization produces consistent slugs across all 9 sport types with live Polymarket data
 
 ### VALID-02 — Score-change debounce thresholds are configurable per sport type (not just global cooldown)
 
-- Status: validated
+- Status: active
 - Class: core-capability
 - Source: inferred
-- Primary Slice: S09
+- Primary Slice: none yet
 
-Per-sport cooldown dict loaded from SPORTS_INGAME_COOLDOWN_{LEAGUE} env vars; 9 unit tests cover all paths including global fallback, shorter/longer overrides, invalid env, tick integration.
+Score-change debounce thresholds are configurable per sport type (not just global cooldown)
 
 ### VALID-03 — CLOB rate limiting prevents exceeding 60 orders/min across both sports and general pipelines
 
-- Status: validated
+- Status: active
 - Class: core-capability
 - Source: inferred
-- Primary Slice: S09
+- Primary Slice: none yet
 
-Concurrent 9-game simulation proves peak_rate=9 orders in rolling 60s window — well under 60/min CLOB limit. validate_rate_limit.py produces structured JSON evidence.
+CLOB rate limiting prevents exceeding 60 orders/min across both sports and general pipelines
+
+## Validated
 
 ### PIPE-01 — Pre-game analysis calls `detect_value_bet()` to flag value opportunities before placing trades
 

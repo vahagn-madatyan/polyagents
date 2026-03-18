@@ -128,17 +128,6 @@ class InGameTrader:
 
         # Read configuration from environment
         self.cooldown_seconds: int = _env_int("SPORTS_INGAME_COOLDOWN_SECONDS", 30)
-
-        # Per-sport cooldown overrides (SPORTS_INGAME_COOLDOWN_{LEAGUE} env vars)
-        self._sport_cooldowns: dict[str, int] = {}
-        for _league_key in _FINAL_PERIODS:
-            _env_key = f"SPORTS_INGAME_COOLDOWN_{_league_key.upper()}"
-            _val = os.getenv(_env_key)
-            if _val is not None:
-                try:
-                    self._sport_cooldowns[_league_key] = int(_val)
-                except (TypeError, ValueError):
-                    pass
         self.min_confidence_gap: float = _env_float(
             "SPORTS_INGAME_MIN_CONFIDENCE_GAP", 0.15
         )
@@ -152,10 +141,6 @@ class InGameTrader:
         self._last_processed: dict[int, float] = {}
         self._slow_path_in_flight: set[int] = set()
         self._game_exposure: dict[int, float] = {}
-
-        # Rolling order-rate tracking (timestamps of real, non-dry-run orders)
-        self._order_timestamps: list[float] = []
-        self._order_rate_window: int = 60  # seconds
 
         # Persistence paths — configurable via env, defaults to /tmp
         self._order_log_path = os.environ.get(
@@ -265,8 +250,7 @@ class InGameTrader:
             return
         market_tag = tags[0]
 
-        league = state.league if state else None
-        if not self._should_process(game_id, league=league):
+        if not self._should_process(game_id):
             print(
                 f"[ingame_trader] event=period_transition_skipped game_id={game_id} "
                 f"reason=cooldown_or_in_flight"
@@ -328,7 +312,7 @@ class InGameTrader:
                 )
             return
 
-        if not self._should_process(game_id, league=current.league):
+        if not self._should_process(game_id):
             print(
                 f"[ingame_trader] event=score_change_skipped game_id={game_id} "
                 f"reason=cooldown_or_in_flight"
@@ -665,7 +649,6 @@ class InGameTrader:
             self._log_order(game_id, order_id, market_tag.market_id)
             self._record_exposure(game_id, amount)
             self._budget.record_sports_trade(amount, market_tag.league)
-            self._record_order_timestamp()
             print(
                 f"[ingame_trader] event=ingame_trade_placed game_id={game_id} "
                 f"outcome={outcome} order_id={order_id} amount={amount:.2f}"
@@ -679,62 +662,32 @@ class InGameTrader:
     # Guards and checks
     # ------------------------------------------------------------------
 
-    def _should_process(self, game_id: int, league: str | None = None) -> bool:
+    def _should_process(self, game_id: int) -> bool:
         """Return True when game is eligible for processing.
 
         Checks:
         - Not in _ended_games
-        - Not in cooldown (uses sport-specific cooldown if available)
+        - Not in cooldown
         - Not in slow-path in-flight
         """
         if game_id in self._ended_games:
             return False
-        if self._is_in_cooldown(game_id, league):
+        if self._is_in_cooldown(game_id):
             return False
         if game_id in self._slow_path_in_flight:
             return False
         return True
 
-    def _is_in_cooldown(self, game_id: int, league: str | None = None) -> bool:
-        """Return True if game is within cooldown window.
-
-        Uses sport-specific cooldown from SPORTS_INGAME_COOLDOWN_{LEAGUE} if
-        configured; falls back to the global SPORTS_INGAME_COOLDOWN_SECONDS.
-        """
+    def _is_in_cooldown(self, game_id: int) -> bool:
+        """Return True if game is within cooldown window."""
         last = self._last_processed.get(game_id)
         if last is None:
             return False
-        cooldown = self.cooldown_seconds  # global default
-        if league:
-            cooldown = self._sport_cooldowns.get(league.lower(), cooldown)
-        return (time.time() - last) < cooldown
+        return (time.time() - last) < self.cooldown_seconds
 
     def _mark_processed(self, game_id: int) -> None:
         """Record current time as last-processed timestamp for game."""
         self._last_processed[game_id] = time.time()
-
-    def _record_order_timestamp(self) -> int:
-        """Record a real-order timestamp and return the rolling 60s order count.
-
-        Prunes timestamps older than the rate window before counting.
-        Only called for non-dry-run executions.
-        """
-        now = time.time()
-        cutoff = now - self._order_rate_window
-        self._order_timestamps = [t for t in self._order_timestamps if t >= cutoff]
-        self._order_timestamps.append(now)
-        count = len(self._order_timestamps)
-        print(f"[ingame_trader] metric=order_rate_60s count={count}")
-        return count
-
-    def get_order_rate(self) -> int:
-        """Return the current rolling 60-second order count (read-only).
-
-        Prunes stale entries before counting so the value is always fresh.
-        """
-        cutoff = time.time() - self._order_rate_window
-        self._order_timestamps = [t for t in self._order_timestamps if t >= cutoff]
-        return len(self._order_timestamps)
 
     def _check_exposure(self, game_id: int, amount: float) -> bool:
         """Return True if adding amount stays within per-game exposure cap."""
