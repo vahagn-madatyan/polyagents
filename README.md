@@ -1,361 +1,305 @@
-<!-- PROJECT SHIELDS -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
+# predikt
 
+Autonomous AI trading agent for [Polymarket](https://polymarket.com) prediction markets. Trade sports, crypto, news, and general markets — autonomously or with a single command.
 
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/polymarket/agents">
-    <img src="docs/images/cli.png" alt="Logo" width="466" height="262">
-  </a>
+---
 
-<h3 align="center">Polymarket Agents</h3>
+## Install
 
-  <p align="center">
-    Trade autonomously on Polymarket using AI Agents
-    <br />
-    <a href="https://github.com/polymarket/agents"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/polymarket/agents">View Demo</a>
-    ·
-    <a href="https://github.com/polymarket/agents/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
-    ·
-    <a href="https://github.com/polymarket/agents/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
-  </p>
-</div>
+```bash
+pip install predikt
+```
 
+## Quick Start
 
-<!-- CONTENT -->
-# Polymarket Agents
+1. **Set up your keys** — create a `.env` file:
 
-Polymarket Agents is a developer framework and set of utilities for building AI agents for Polymarket.
-
-This code is free and publicly available under MIT License open source license ([terms of service](#terms-of-service))!
-
-## Features
-
-- Integration with Polymarket API
-- AI agent utilities for prediction markets
-- Local and remote RAG (Retrieval-Augmented Generation) support
-- Data sourcing from betting services, news providers, and web search
-- Comphrehensive LLM tools for prompt engineering
-
-# Getting started
-
-This repo is intended for Python 3.9+.
-
-1. Clone the repository
-
-   ```
-   git clone https://github.com/{username}/polymarket-agents.git
-   cd polymarket-agents
+   ```env
+   POLYGON_WALLET_PRIVATE_KEY=<your-polygon-private-key>
+   POLYMARKET_FUNDER_ADDRESS=<your-funder-address>
+   OPENAI_API_KEY=<your-openai-key>
    ```
 
-2. Create a virtual environment
-
-   ```
-   python3 -m venv .venv
-   ```
-
-3. Activate the virtual environment
-
-   - On Windows:
-
-   ```
-   .venv\Scripts\activate
+   Optional for extended features:
+   ```env
+   NEWSAPI_API_KEY=<your-newsapi-key>        # news-enriched analysis
+   TAVILY_API_KEY=<your-tavily-key>          # web search context
+   SPORTS_DATA_API_KEY=<your-sportsdata-key> # live sports stats
+   SPORTS_ODDS_API_KEY=<your-odds-key>       # live odds feeds
    ```
 
-   - On macOS and Linux:
+2. **Run it:**
 
-   ```
-   source .venv/bin/activate
-   ```
-
-4. Install dependencies
-
-   ```
-   pip install -r requirements.txt
+   ```bash
+   predikt run-autonomous-trader
    ```
 
-5. Set up environment variables
+   That's it. The agent scans Polymarket events, runs LLM-powered superforecaster analysis, and executes trades when it finds mispriced markets.
 
-   ```
-   cp .env.example .env
-   ```
+---
 
-   Minimum keys to start:
-   - `POLYGON_WALLET_PRIVATE_KEY`
-   - `OPENAI_API_KEY`
-   - `NEWSAPI_API_KEY` (required for news commands/features)
+## Pipelines
 
-   Current `.env.example` values:
+predikt ships with five autonomous trading pipelines:
 
-   ```
-   POLYGON_WALLET_PRIVATE_KEY=""
-   POLYMARKET_SIGNATURE_TYPE="0"
-   POLYMARKET_FUNDER_ADDRESS=""
-   OPENAI_API_KEY=""
-   TAVILY_API_KEY=""
-   NEWSAPI_API_KEY=""
-   OPENAI_MODEL="gpt-5-mini"
-   OPENAI_LOG="info"
-   OPENAI_TEMPERATURE=""
-   APP_LOG_LEVEL="INFO"
-   ALLOW_RESTRICTED_EVENTS="false"
-   EXECUTE_TRADES="false"
-   POLYGON_RPC_URL="https://polygon-rpc.com"
-   POLYGON_COLLATERAL_USDC_ADDRESS="0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
-   POLYGON_NATIVE_USDC_ADDRESS="0x3c499c542cef5e3811e1192ce70d8cc03d5c3359"
-   USDC_BALANCE_TOKEN_ADDRESSES=""
-   TRADE_CANDIDATE_COUNT="5"
-   TRADE_DIVERSITY_MODE="soft_quota"
-   TRADE_DIVERSITY_MIN_CATEGORIES="3"
-   TRADE_MAX_MARKETS_TO_SCORE="20"
-   TRADE_TOTAL_BUDGET_FRACTION="0.30"
-   TRADE_MAX_PER_MARKET_FRACTION="0.10"
-   TRADE_MIN_PER_MARKET_FRACTION="0.02"
-   TRADE_CONTINUE_ON_EXECUTION_ERROR="true"
-   TRADE_LOG_RATIONALE="true"
-   TRADE_INCLUDE_NEWS="false"
-   TRADE_NEWS_LIMIT="5"
-   TRADE_NEWS_DAYS="7"
-   TRADE_NEWS_RELEVANCE="true"
-   TRADE_NEWS_CONTEXT_ARTICLE_CAP="3"
-   TRADE_EXCLUDE_SPORTS="false"
-   TRADE_MIN_ORDER_AMOUNT_USDC="1.0"
-   TRADE_MIN_MARKET_VOLUME="10000"
-   TRADE_MIN_MARKET_LIQUIDITY="5000"
-   TRADE_MIN_ENTRY_PRICE="0.03"
-   TRADE_MAX_ENTRY_PRICE="0.97"
-   GAMMA_MARKET_FETCH_CONCURRENCY="24"
-   GAMMA_HTTP_MAX_CONNECTIONS="100"
-   GAMMA_HTTP_MAX_KEEPALIVE_CONNECTIONS="40"
-   GAMMA_HTTP_TIMEOUT_SECONDS="8"
-   GAMMA_LOG_MARKET_DETAIL_URL="false"
-   ```
+| Pipeline | Command | What it does |
+|----------|---------|-------------|
+| **General** | `predikt run-autonomous-trader` | Scans all Polymarket events, filters candidates via RAG, runs two-stage LLM analysis, executes best trades |
+| **Continuous** | `predikt run-continuous` | High-speed loop — trades trending/breaking events every N seconds |
+| **Sports** | `predikt-sports` | Live sports trading via WebSocket — pre-game positioning + in-game score-change reactions |
+| **Crypto** | `predikt run-crypto` | Real-time crypto price feeds + LLM analysis for BTC/ETH/SOL/XRP markets |
+| **BTC Arbitrage** | `predikt run-crypto-arbitrage` | Pure algorithmic — no LLM. Dual Binance + Chainlink price feeds, 15-second intervals |
 
-   `POLYMARKET_SIGNATURE_TYPE` values:
-   - `0`: Browser wallet / EOA wallet mode (funder defaults to signer)
-   - `1`: Email / Magic wallet mode (proxy wallet)
-   - `2`: Browser wallet + proxy wallet mode (set `POLYMARKET_FUNDER_ADDRESS` to your profile wallet)
+---
 
-6. Load your wallet with USDC.
+## CLI Reference
 
-7. Run the CLI
+### Autonomous Trading
 
-   ```
-   PYTHONPATH=. python scripts/python/cli.py --help
-   ```
+```bash
+# Default: scan all markets, pick the best trade
+predikt run-autonomous-trader
 
-   If `python` is not available in your shell, use `python3`:
+# Scope to a single event
+predikt run-autonomous-trader --event-url "https://polymarket.com/event/..."
 
-   ```
-   PYTHONPATH=. python3 scripts/python/cli.py --help
-   ```
+# Include news context in analysis
+predikt run-autonomous-trader --include-news --news-limit 10 --news-days 3
 
-   Or run the trader module directly:
+# Exclude sports markets
+predikt run-autonomous-trader --exclude-sports
+```
 
-   ```
-   PYTHONPATH=. python agents/application/trade.py
-   ```
+### Analyze a Specific Event
 
-8. Optional Docker workflow
+```bash
+# Run prediction pipeline without executing (respects EXECUTE_TRADES env var)
+predikt analyze-event-url "https://polymarket.com/event/..."
 
-   ```
-   ./scripts/bash/build-docker.sh
-   ./scripts/bash/run-docker-dev.sh
-   ```
+# With news enrichment
+predikt analyze-event-url "https://polymarket.com/event/..." --news-limit 10
+```
+
+### Continuous Trading
+
+```bash
+# Trade every 30 seconds, $100 session budget
+predikt run-continuous
+
+# Custom interval and budget
+predikt run-continuous --interval 60 --session-budget 250
+
+# With cooldown between trades on the same market
+predikt run-continuous --cooldown 600 --volatility-threshold 0.08
+```
+
+### Sports Trading
+
+```bash
+# Start the live sports pipeline
+predikt-sports
+
+# Connects to Polymarket sports WebSocket, streams live game state,
+# executes pre-game + in-game trades autonomously.
+```
+
+Sports pipeline features:
+- **Pre-game**: Two-stage LLM analysis (blind probability → market-aware value detection)
+- **In-game**: Fast-path (cached probability, no LLM) and slow-path (full re-analysis) on score changes
+- **All sports**: NFL, NBA, MLB, NHL, CFB, CBB, soccer, esports, tennis
+- **Budget coordination**: Cross-process filelock with configurable per-sport caps
+
+Key environment variables:
+```env
+SPORTS_BUDGET_FRACTION="0.30"         # fraction of wallet for sports
+SPORTS_EXECUTE_TRADES="false"         # sports-specific trade toggle
+SPORTS_CAP_NFL="0.4"                  # per-sport budget caps
+SPORTS_CAP_NBA="0.3"
+SPORTS_CAP_MLB="0.15"
+SPORTS_CAP_NHL="0.15"
+SPORTS_INGAME_COOLDOWN_SECONDS="30"   # per-game cooldown
+SPORTS_MAX_GAME_EXPOSURE_USD="50.0"   # max USD per game
+```
+
+### Crypto Trading
+
+```bash
+# Trade crypto price markets with live WebSocket feeds
+predikt run-crypto
+
+# Custom symbols and edge threshold
+predikt run-crypto --symbols "BTC,ETH,SOL" --min-edge 0.08 --session-budget 200
+
+# BTC 5-minute interval arbitrage (no LLM, pure price momentum)
+predikt run-crypto-arbitrage --session-budget 50 --min-edge 0.10
+```
+
+### Market Exploration
+
+```bash
+# Browse markets sorted by spread
+predikt get-all-markets --limit 10 --sort-by spread
+
+# Browse events sorted by number of markets
+predikt get-all-events --limit 10
+
+# Search news for market context
+predikt get-relevant-news "bitcoin ETF" --limit 5 --days 3
+
+# Check wallet and USDC balance
+predikt diagnose-usdc-balance
+```
+
+### LLM & Forecasting
+
+```bash
+# Ask the superforecaster about a specific market
+predikt ask-superforecaster "US Election" "Will Biden win?" "yes"
+
+# General LLM query
+predikt ask-llm "What factors affect prediction market liquidity?"
+
+# LLM query with live Polymarket context
+predikt ask-polymarket-llm "What are the best crypto markets to trade right now?"
+```
+
+### RAG (Local Market Database)
+
+```bash
+# Build a local vector database of Polymarket events
+predikt create-local-markets-rag ./local_db_events
+
+# Query the local database
+predikt query-local-markets-rag ./local_db_events "upcoming elections"
+```
+
+---
+
+## Configuration
+
+All configuration is via environment variables. Create a `.env` file in the project root — predikt loads it automatically.
+
+### Core Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POLYGON_WALLET_PRIVATE_KEY` | — | Your Polygon wallet private key |
+| `POLYMARKET_FUNDER_ADDRESS` | — | Polymarket funder address |
+| `OPENAI_API_KEY` | — | OpenAI API key for LLM analysis |
+| `OPENAI_MODEL` | `gpt-5-mini` | Model to use for analysis |
+| `EXECUTE_TRADES` | `false` | Master trade execution toggle — set `true` for live trading |
+| `APP_LOG_LEVEL` | `INFO` | Logging verbosity |
+
+### Trade Parameters
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TRADE_TOTAL_BUDGET_FRACTION` | `0.30` | Fraction of wallet to use per session |
+| `TRADE_MAX_PER_MARKET_FRACTION` | `0.10` | Max fraction per single market |
+| `TRADE_CANDIDATE_COUNT` | `5` | Number of candidates to evaluate |
+| `TRADE_DIVERSITY_MODE` | `soft_quota` | Diversification strategy |
+| `TRADE_MIN_MARKET_VOLUME` | `10000` | Minimum market volume filter |
+| `TRADE_MIN_MARKET_LIQUIDITY` | `5000` | Minimum market liquidity filter |
+
+### Continuous Mode
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CONTINUOUS_INTERVAL_SECONDS` | `30` | Seconds between trade cycles |
+| `CONTINUOUS_SESSION_BUDGET` | `100` | Session budget in USDC |
+| `CONTINUOUS_COOLDOWN_SECONDS` | `300` | Per-market cooldown |
+| `CONTINUOUS_VOLATILITY_THRESHOLD` | `0.05` | Minimum volatility to trade |
+
+### Crypto Mode
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CRYPTO_SYMBOLS` | `BTC,ETH,SOL,XRP` | Symbols to trade |
+| `CRYPTO_MIN_EDGE` | `0.05` | Minimum edge to execute |
+| `ARB_MIN_EDGE` | `0.10` | Minimum edge for BTC arbitrage |
+| `ARB_PRICE_FEED_TOLERANCE` | `0.001` | Cross-feed price tolerance |
+
+See `.env.example` for the full list of 60+ configuration variables.
+
+---
 
 ## Architecture
 
-The Polymarket Agents architecture features modular components that can be maintained and extended by individual community members.
-
-### APIs
-
-Polymarket Agents connectors standardize data sources and order types.
-
-- `Chroma.py`: chroma DB for vectorizing news sources and other API data. Developers are able to add their own vector database implementations.
-
-- `Gamma.py`: defines `GammaMarketClient` class, which interfaces with the Polymarket Gamma API to fetch and parse market and event metadata. Methods to retrieve current and tradable markets, as well as defined information on specific markets and events.
-
-- `Polymarket.py`: defines a Polymarket class that interacts with the Polymarket API to retrieve and manage market and event data, and to execute orders on the Polymarket DEX. It includes methods for API key initialization, market and event data retrieval, and trade execution. The file also provides utility functions for building and signing orders, as well as examples for testing API interactions.
-
-- `Objects.py`: data models using Pydantic; representations for trades, markets, events, and related entities.
-
-### Scripts
-
-Files for managing your local environment, server set-up to run the application remotely, and cli for end-user commands.
-
-`cli.py` is the primary user interface for the repo. Users can run commands to query Polymarket data, gather supporting news, run local RAG, ask LLM helpers, and execute autonomous trading workflows.
-
-General command format:
-
-`PYTHONPATH=. python scripts/python/cli.py <command> [options]`
-
-Run `--help` on any command for full usage:
-
-`PYTHONPATH=. python scripts/python/cli.py <command> --help`
-
-#### CLI command reference
-
-- `get-all-markets [--limit 5] [--sort-by spread]`
-- `get-all-events [--limit 5] [--sort-by number_of_markets]`
-- `get-relevant-news <keywords> [--limit 10] [--days 7] [--relevance|--no-relevance]`
-- `create-local-markets-rag <local_directory>`
-- `query-local-markets-rag <vector_db_directory> <query>`
-- `ask-superforecaster <event_title> <market_question> <outcome>`
-- `create-market`
-- `ask-llm <user_input>`
-- `ask-polymarket-llm <user_input>`
-- `diagnose-usdc-balance`
-- `run-autonomous-trader [--event-url URL] [--include-news|--no-include-news] [--news-limit 5] [--news-days 7] [--news-relevance|--no-news-relevance] [--exclude-sports|--no-exclude-sports]`
-- `analyze-event-url <event_url> [--news-limit 5] [--news-days 7] [--news-relevance|--no-news-relevance] [--exclude-sports|--no-exclude-sports]`
-- `run-continuous [--interval 30] [--session-budget 100] [--cooldown 300] [--include-news] [--exclude-sports] [--volatility-threshold 0.05]`
-- `run-crypto [--interval 30] [--session-budget 100] [--symbols BTC,ETH,SOL,XRP] [--min-edge 0.05]`
-- `run-crypto-arbitrage [--session-budget 50] [--max-per-trade 5] [--min-edge 0.10] [--price-feed-tolerance 0.001]`
-
-#### Trading command examples
-
-`run-autonomous-trader` (full pipeline across filtered events/markets):
-
 ```
-PYTHONPATH=. python scripts/python/cli.py run-autonomous-trader \
-  --include-news \
-  --exclude-sports \
-  --news-limit 5 \
-  --news-days 7 \
-  --news-relevance
+predikt
+├── agents/
+│   ├── application/          # trading pipelines and strategies
+│   │   ├── trade.py          # general autonomous trader
+│   │   ├── continuous.py     # high-speed continuous loop
+│   │   ├── crypto.py         # crypto price market strategy
+│   │   ├── btc_arbitrage.py  # pure algorithmic BTC arb
+│   │   ├── sports_trader.py  # pre-game sports trading
+│   │   ├── ingame_trader.py  # live in-game trading engine
+│   │   ├── executor.py       # two-stage LLM analysis engine
+│   │   ├── budget.py         # cross-process budget coordinator
+│   │   └── ...
+│   ├── connectors/           # external data sources
+│   │   ├── sports_ws.py      # Polymarket sports WebSocket
+│   │   ├── sports_data.py    # external sports stats API
+│   │   ├── chroma.py         # ChromaDB RAG connector
+│   │   ├── news.py           # NewsAPI connector
+│   │   └── ...
+│   ├── polymarket/           # Polymarket API clients
+│   │   ├── polymarket.py     # CLOB order execution
+│   │   └── gamma.py          # Gamma API market discovery
+│   ├── utils/
+│   └── sports.py             # sports pipeline entry point
+└── scripts/
+    └── python/
+        └── cli.py            # CLI entry point (typer)
 ```
 
-Single-event mode through the same command:
+### How It Works
 
-```
-PYTHONPATH=. python scripts/python/cli.py run-autonomous-trader \
-  --event-url "https://polymarket.com/event/english-premier-league-winner" \
-  --exclude-sports \
-  --news-limit 5 \
-  --news-days 7 \
-  --news-relevance
-```
+1. **Discovery** — Scans Polymarket events via Gamma API, filters by category, volume, liquidity
+2. **Context** — Enriches candidates with news (NewsAPI), web search (Tavily), and RAG (ChromaDB)
+3. **Analysis** — Two-stage LLM superforecaster: blind probability estimate → market-aware value detection
+4. **Execution** — Places orders via Polymarket CLOB API with confidence-weighted budget allocation
+5. **Coordination** — Cross-process budget management with filelock for multi-pipeline operation
 
-`analyze-event-url` (target one Polymarket event):
+---
 
-```
-PYTHONPATH=. python scripts/python/cli.py analyze-event-url \
-  "https://polymarket.com/event/english-premier-league-winner" \
-  --exclude-sports \
-  --news-limit 5 \
-  --news-days 7 \
-  --news-relevance
-```
+## Safety
 
-#### Live trading modes
+- **Dry-run by default** — `EXECUTE_TRADES=false` out of the box. No trades execute until you explicitly enable it.
+- **Paper mode first** — Test with small budgets before going live.
+- **Budget caps** — Per-market, per-sport, and per-session limits prevent runaway spending.
+- **Cross-process safety** — Filelock-based budget coordination when running multiple pipelines.
+- **Minimum order guards** — Configurable floor on order size and market quality filters.
 
-`run-continuous` (high-speed loop across all market categories):
+---
 
-```
-PYTHONPATH=. python scripts/python/cli.py run-continuous \
-  --interval 30 \
-  --session-budget 100 \
-  --cooldown 300 \
-  --include-news \
-  --exclude-sports
+## Build from Source
+
+```bash
+git clone https://github.com/vahagn-madatyan/predikt.git
+cd predikt
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
-`run-crypto` (crypto price prediction markets with live WebSocket prices):
+Run tests:
 
-```
-PYTHONPATH=. python scripts/python/cli.py run-crypto \
-  --interval 30 \
-  --session-budget 100 \
-  --symbols BTC,ETH,SOL \
-  --min-edge 0.05
+```bash
+pytest tests/ -q
 ```
 
-`run-crypto-arbitrage` (algorithmic BTC 5-minute markets, no LLM):
+---
 
-```
-PYTHONPATH=. python scripts/python/cli.py run-crypto-arbitrage \
-  --session-budget 50 \
-  --max-per-trade 5 \
-  --min-edge 0.10
-```
+## Attribution
 
-All live trading modes run until the session budget is exhausted or you press Ctrl+C. They respect `EXECUTE_TRADES=false` for dry-run mode.
+This project was forked from Polymarket's [agents](https://github.com/polymarket/agents) repository, extended with autonomous sports, crypto, and continuous trading pipelines.
 
-#### Live-mode and safety flags
+---
 
-- `EXECUTE_TRADES=false` is the default. Set `EXECUTE_TRADES=true` to place live orders.
-- `TRADE_MIN_ORDER_AMOUNT_USDC=1.0` skips allocations below this threshold before execution.
-- `TRADE_CONTINUE_ON_EXECUTION_ERROR=true` controls whether execution stops on first failed order.
-- `TRADE_INCLUDE_NEWS`, `TRADE_NEWS_LIMIT`, `TRADE_NEWS_DAYS`, `TRADE_NEWS_RELEVANCE`, and `TRADE_EXCLUDE_SPORTS` provide environment-level defaults that CLI flags can override.
-- `CONTINUOUS_INTERVAL_SECONDS`, `CONTINUOUS_SESSION_BUDGET`, `CONTINUOUS_COOLDOWN_SECONDS`, `CONTINUOUS_VOLATILITY_THRESHOLD` configure continuous mode defaults.
-- `CRYPTO_INTERVAL_SECONDS`, `CRYPTO_SESSION_BUDGET`, `CRYPTO_SYMBOLS`, `CRYPTO_MIN_EDGE` configure crypto mode defaults.
-- `ARB_SESSION_BUDGET`, `ARB_MAX_PER_TRADE`, `ARB_MIN_EDGE`, `ARB_PRICE_FEED_TOLERANCE` configure BTC arbitrage mode defaults.
+## Disclaimer
 
-# Contributing
+This software is for educational and research purposes. Trading on prediction markets involves risk — you can lose money. No trading system is guaranteed to be profitable. Always start with paper/dry-run mode. The authors are not responsible for any financial losses incurred through use of this software.
 
-If you would like to contribute to this project, please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch.
-3. Make your changes.
-4. Submit a pull request.
-
-Please run pre-commit hooks before making contributions. To initialize them:
-
-   ```
-   pre-commit install
-   ```
-
-Run all hooks (including the secret scan) before opening a PR:
-
-   ```
-   pre-commit run --all-files
-   ```
-
-# Related Repos
-
-- [py-clob-client](https://github.com/Polymarket/py-clob-client): Python client for the Polymarket CLOB
-- [python-order-utils](https://github.com/Polymarket/python-order-utils): Python utilities to generate and sign orders from Polymarket's CLOB
-- [Polymarket CLOB client](https://github.com/Polymarket/clob-client): Typescript client for Polymarket CLOB
-- [Langchain](https://github.com/langchain-ai/langchain): Utility for building context-aware reasoning applications
-- [Chroma](https://docs.trychroma.com/getting-started): Chroma is an AI-native open-source vector database
-
-# Prediction markets reading
-
-- Prediction Markets: Bottlenecks and the Next Major Unlocks, Mikey 0x: https://mirror.xyz/1kx.eth/jnQhA56Kx9p3RODKiGzqzHGGEODpbskivUUNdd7hwh0
-- The promise and challenges of crypto + AI applications, Vitalik Buterin: https://vitalik.eth.limo/general/2024/01/30/cryptoai.html
-- Superforecasting: How to Upgrade Your Company's Judgement, Schoemaker and Tetlock: https://hbr.org/2016/05/superforecasting-how-to-upgrade-your-companys-judgment
-
-# License
-
-This project is licensed under the MIT License. See the [LICENSE](https://github.com/Polymarket/agents/blob/main/LICENSE.md) file for details.
-
-# Contact
-
-For any questions or inquiries, please contact liam@polymarket.com or reach out at www.greenestreet.xyz
-
-Enjoy using the CLI application! If you encounter any issues, feel free to open an issue on the repository.
-
-# Terms of Service
-
-[Terms of Service](https://polymarket.com/tos) prohibit US persons and persons from certain other jurisdictions from trading on Polymarket (via UI & API and including agents developed by persons in restricted jurisdictions), although data and information is viewable globally.
-
-
-<!-- LINKS -->
-[contributors-shield]: https://img.shields.io/github/contributors/polymarket/agents?style=for-the-badge
-[contributors-url]: https://github.com/polymarket/agents/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/polymarket/agents?style=for-the-badge
-[forks-url]: https://github.com/polymarket/agents/network/members
-[stars-shield]: https://img.shields.io/github/stars/polymarket/agents?style=for-the-badge
-[stars-url]: https://github.com/polymarket/agents/stargazers
-[issues-shield]: https://img.shields.io/github/issues/polymarket/agents?style=for-the-badge
-[issues-url]: https://github.com/polymarket/agents/issues
-[license-shield]: https://img.shields.io/github/license/polymarket/agents?style=for-the-badge
-[license-url]: https://github.com/polymarket/agents/blob/master/LICENSE.md
+This code is free and publicly available under the [MIT License](LICENSE.md).

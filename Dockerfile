@@ -1,7 +1,8 @@
-FROM python:3.9
+FROM python:3.12-slim
 
-COPY . /home
-WORKDIR /home
+COPY . /app
+WORKDIR /app
 
-RUN pip3 install -r requirements.txt
-RUN export PYTHONPATH="."
+RUN pip install --no-cache-dir -e .
+
+CMD ["predikt", "run-autonomous-trader"]
